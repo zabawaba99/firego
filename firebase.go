@@ -20,6 +20,12 @@ func New(url string) *Firebase {
 	}
 }
 
+// String returns the string representation of the
+// Firebase reference
+func (fb *Firebase) String() string {
+	return fb.url
+}
+
 // Child creates a new Firebase reference for the requested
 // child string
 func (fb *Firebase) Child(child string) *Firebase {
