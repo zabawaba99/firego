@@ -25,6 +25,15 @@ Create a new firego reference
 f := firego.New("https://my-firebase-app.firebaseIO.com")
 ```
 
+### Auth Tokens
+
+```go
+f.SetAuth("some-token-that-was-created-for-me")
+f.RemoveAuth()
+```
+
+Visit [Fireauth](https://github.com/zabawaba99/fireauth) if you'd like to generate your own auth tokens
+
 ### Get Value
 
 ```go
