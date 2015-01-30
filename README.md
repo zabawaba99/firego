@@ -16,7 +16,7 @@ go get -u github.com/zabawaba99/firego
 Import firego
 
 ```go
-import "github.com/zabawaba/firego"
+import "github.com/zabawaba99/firego"
 ```
 
 Create a new firego reference
