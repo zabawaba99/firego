@@ -2,6 +2,7 @@ package firego
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"net/http"
 )
@@ -48,5 +49,12 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 	}
 
 	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode/200 != 1 {
+		return nil, errors.New(string(respBody))
+	}
+	return respBody, nil
 }
