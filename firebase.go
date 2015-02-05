@@ -10,16 +10,19 @@ import (
 
 // Firebase represents a location in the cloud
 type Firebase struct {
-	url    string
-	auth   string
-	client *http.Client
+	url          string
+	auth         string
+	client       *http.Client
+	watching     bool
+	stopWatching chan struct{}
 }
 
 // New creates a new Firebase reference
 func New(url string) *Firebase {
 	return &Firebase{
-		url:    url,
-		client: &http.Client{},
+		url:          url,
+		client:       &http.Client{},
+		stopWatching: make(chan struct{}),
 	}
 }
 
@@ -33,9 +36,10 @@ func (fb *Firebase) String() string {
 // child string
 func (fb *Firebase) Child(child string) *Firebase {
 	return &Firebase{
-		url:    fb.url + "/" + child,
-		auth:   fb.auth,
-		client: fb.client,
+		url:          fb.url + "/" + child,
+		auth:         fb.auth,
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
 	}
 }
 
