@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func newSSEServer(t *testing.T, event, path, data string) *httptest.Server {
+func newSSEServer(t *testing.T, event, path, data string, stop chan struct{}) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		flusher, ok := w.(http.Flusher)
 
@@ -26,6 +26,7 @@ func newSSEServer(t *testing.T, event, path, data string) *httptest.Server {
 
 		// Flush the data immediatly instead of buffering it for later.
 		flusher.Flush()
+		<-stop
 	}))
 }
 
@@ -33,11 +34,14 @@ func TestWatch(t *testing.T) {
 	t.Parallel()
 	var (
 		eventType, path, data = "put", "foo", "bar"
-		server                = newSSEServer(t, eventType, path, data)
+		notifications, stop   = make(chan Event), make(chan struct{})
+		server                = newSSEServer(t, eventType, path, data, stop)
 		fb                    = New(server.URL)
-		notifications         = make(chan Event)
 	)
-	defer server.Close()
+	defer func() {
+		close(stop)
+		server.Close()
+	}()
 
 	if err := fb.Watch(notifications); err != nil {
 		t.Fatal(err)
@@ -57,5 +61,65 @@ func TestWatch(t *testing.T) {
 
 	if event.Data.(string) != data {
 		t.Fatalf("Expected: %s\nActual: %s", data, event.Data)
+	}
+}
+
+func TestStopWatch(t *testing.T) {
+	t.Parallel()
+	var (
+		eventType, path, data = "put", "foo", "bar"
+		moveOn, stop          = make(chan struct{}), make(chan struct{})
+		notifications         = make(chan Event)
+		server                = newSSEServer(t, eventType, path, data, stop)
+		fb                    = New(server.URL)
+	)
+	defer func() {
+		close(stop)
+		server.Close()
+	}()
+
+	go func() {
+		if err := fb.Watch(notifications); err != nil {
+			t.Fatal(err)
+		}
+		<-moveOn
+		fb.StopWatching()
+	}()
+
+	<-notifications
+	moveOn <- struct{}{}
+	if _, ok := <-notifications; ok {
+		t.Fatal("notifications should be closed")
+	}
+}
+
+func TestWatch_Cancel(t *testing.T) {
+	var (
+		eventType, path, data = "cancel", "", ""
+		notifications, stop   = make(chan Event), make(chan struct{})
+		server                = newSSEServer(t, eventType, path, data, stop)
+		fb                    = New(server.URL)
+	)
+
+	defer func() {
+		close(stop)
+		server.Close()
+	}()
+
+	if err := fb.Watch(notifications); err != nil {
+		t.Fatal(err)
+	}
+
+	event, ok := <-notifications
+	if !ok {
+		t.Fatal("notifications closed")
+	}
+
+	if event.Type != eventType {
+		t.Fatalf("Expected: %s\nActual: %s", eventType, event.Type)
+	}
+
+	if _, ok := <-notifications; ok {
+		t.Fatal("notifications should be closed")
 	}
 }
