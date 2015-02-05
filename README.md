@@ -1,4 +1,7 @@
 # Firego
+---
+[![Build Status](https://travis-ci.org/zabawaba99/firego.svg?branch=master)](https://travis-ci.org/zabawaba99/firego)
+---
 
 A Firebase client written in Go
 
