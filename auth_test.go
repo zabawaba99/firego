@@ -2,7 +2,7 @@ package firego
 
 import "testing"
 
-func TestSetAuth(t *testing.T) {
+func TestAuth(t *testing.T) {
 	t.Parallel()
 	var (
 		token  = "token"
@@ -10,7 +10,7 @@ func TestSetAuth(t *testing.T) {
 		fb     = New(server.URL)
 	)
 	defer server.Close()
-	fb.SetAuth(token)
+	fb.Auth(token)
 	fb.Value("")
 	if expected, actual := 1, len(server.receivedReqs); expected != actual {
 		t.Fatalf("Expected: %d\nActual: %d", expected, actual)
@@ -22,7 +22,7 @@ func TestSetAuth(t *testing.T) {
 	}
 }
 
-func TestRemoveAuth(t *testing.T) {
+func TestUnauth(t *testing.T) {
 	t.Parallel()
 	var (
 		token  = "token"
@@ -30,8 +30,8 @@ func TestRemoveAuth(t *testing.T) {
 		fb     = New(server.URL)
 	)
 	defer server.Close()
-	fb.SetAuth(token)
-	fb.RemoveAuth()
+	fb.Auth(token)
+	fb.Unauth()
 	fb.Value("")
 	if expected, actual := 1, len(server.receivedReqs); expected != actual {
 		t.Fatalf("Expected: %d\nActual: %d", expected, actual)

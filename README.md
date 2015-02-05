@@ -6,7 +6,7 @@
 A Firebase client written in Go
 
 ##### Under Development
-The API may or may not change radically within the next upcoming weeks. 
+The API may or may not change radically within the next upcoming weeks.
 
 ## Installation
 
@@ -31,8 +31,8 @@ f := firego.New("https://my-firebase-app.firebaseIO.com")
 ### Auth Tokens
 
 ```go
-f.SetAuth("some-token-that-was-created-for-me")
-f.RemoveAuth()
+f.Auth("some-token-that-was-created-for-me")
+f.Unauth()
 ```
 
 Visit [Fireauth](https://github.com/zabawaba99/fireauth) if you'd like to generate your own auth tokens
@@ -91,7 +91,7 @@ if err := f.Remove(); err != nil {
 }
 ```
 
-Check the [GoDocs](http://godoc.org/github.com/zabawaba99/firego) or 
+Check the [GoDocs](http://godoc.org/github.com/zabawaba99/firego) or
 [Firebase Documentation](https://www.firebase.com/docs/rest/) for more details
 
 ## Contributing
