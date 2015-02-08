@@ -94,6 +94,11 @@ if err := f.Remove(); err != nil {
 Check the [GoDocs](http://godoc.org/github.com/zabawaba99/firego) or
 [Firebase Documentation](https://www.firebase.com/docs/rest/) for more details
 
+## Issues Management
+
+Feel free to open an issue if you come across any bugs or
+if you'd like to request a new feature.
+
 ## Contributing
 
 1. Fork it
