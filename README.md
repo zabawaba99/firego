@@ -11,7 +11,7 @@ The API may or may not change radically within the next upcoming weeks.
 ## Installation
 
 ```bash
-go get -u github.com/zabawaba99/firego
+go get -u github.com/fullcage/firego
 ```
 
 ## Usage
@@ -19,7 +19,7 @@ go get -u github.com/zabawaba99/firego
 Import firego
 
 ```go
-import "github.com/zabawaba99/firego"
+import "github.com/fullcage/firego"
 ```
 
 Create a new firego reference
@@ -35,7 +35,7 @@ f.Auth("some-token-that-was-created-for-me")
 f.Unauth()
 ```
 
-Visit [Fireauth](https://github.com/zabawaba99/fireauth) if you'd like to generate your own auth tokens
+Visit [Fireauth](https://github.com/fullcage/fireauth) if you'd like to generate your own auth tokens
 
 ### Get Value
 
@@ -91,7 +91,7 @@ if err := f.Remove(); err != nil {
 }
 ```
 
-Check the [GoDocs](http://godoc.org/github.com/zabawaba99/firego) or
+Check the [GoDocs](http://godoc.org/github.com/fullcage/firego) or
 [Firebase Documentation](https://www.firebase.com/docs/rest/) for more details
 
 ## Issues Management
