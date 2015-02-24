@@ -1,6 +1,6 @@
 # Firego
 ---
-[![Build Status](https://travis-ci.org/fullcage/firego.svg?branch=readme)](https://travis-ci.org/fullcage/firego) [![Coverage Status](https://coveralls.io/repos/zabawaba99/firego/badge.svg?branch=master)](https://coveralls.io/r/zabawaba99/firego?branch=master)
+[![Build Status](https://travis-ci.org/fullcage/firego.svg?branch=readme)](https://travis-ci.org/fullcage/firego) [![Coverage Status](https://coveralls.io/repos/fullcage/firego/badge.svg)](https://coveralls.io/r/fullcage/firego)
 ---
 
 A Firebase client written in Go
