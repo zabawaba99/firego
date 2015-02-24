@@ -6,9 +6,28 @@ const URL = "https://somefirebaseapp.firebaseIO.com"
 
 func TestNew(t *testing.T) {
 	t.Parallel()
-	fb := New(URL)
-	if fb.url != URL {
-		t.Fatalf("url not set correctly. Expected: %s\nActual: %s", URL, fb.url)
+	testCases := []struct {
+		givenURL string
+	}{
+		{
+			URL,
+		},
+		{
+			URL + "/",
+		},
+		{
+			"somefirebaseapp.firebaseIO.com",
+		},
+		{
+			"somefirebaseapp.firebaseIO.com/",
+		},
+	}
+
+	for _, tt := range testCases {
+		fb := New(tt.givenURL)
+		if fb.url != URL {
+			t.Fatalf("url not set correctly. Expected: %s\nActual: %s", URL, fb.url)
+		}
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 // Firebase represents a location in the cloud
@@ -17,10 +18,22 @@ type Firebase struct {
 	stopWatching chan struct{}
 }
 
+func sanitizeURL(url string) string {
+	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
+		url = "https://" + url
+	}
+
+	if strings.HasSuffix(url, "/") {
+		url = url[:len(url)-1]
+	}
+
+	return url
+}
+
 // New creates a new Firebase reference
 func New(url string) *Firebase {
 	return &Firebase{
-		url:          url,
+		url:          sanitizeURL(url),
 		client:       &http.Client{},
 		stopWatching: make(chan struct{}),
 	}
