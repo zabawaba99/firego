@@ -1,6 +1,6 @@
 # Firego
 ---
-[![Build Status](https://travis-ci.org/fullcage/firego.svg?branch=master)](https://travis-ci.org/fullcage/firego) [![Coverage Status](https://coveralls.io/repos/fullcage/firego/badge.svg)](https://coveralls.io/r/fullcage/firego)
+[![Build Status](https://travis-ci.org/CloudCom/firego.svg?branch=master)](https://travis-ci.org/CloudCom/firego) [![Coverage Status](https://coveralls.io/repos/CloudCom/firego/badge.svg)](https://coveralls.io/r/CloudCom/firego)
 ---
 
 A Firebase client written in Go
@@ -11,7 +11,7 @@ The API may or may not change radically within the next upcoming weeks.
 ## Installation
 
 ```bash
-go get -u github.com/fullcage/firego
+go get -u github.com/CloudCom/firego
 ```
 
 ## Usage
@@ -19,7 +19,7 @@ go get -u github.com/fullcage/firego
 Import firego
 
 ```go
-import "github.com/fullcage/firego"
+import "github.com/CloudCom/firego"
 ```
 
 Create a new firego reference
@@ -35,7 +35,7 @@ f.Auth("some-token-that-was-created-for-me")
 f.Unauth()
 ```
 
-Visit [Fireauth](https://github.com/fullcage/fireauth) if you'd like to generate your own auth tokens
+Visit [Fireauth](https://github.com/CloudCom/fireauth) if you'd like to generate your own auth tokens
 
 ### Get Value
 
@@ -91,7 +91,7 @@ if err := f.Remove(); err != nil {
 }
 ```
 
-Check the [GoDocs](http://godoc.org/github.com/fullcage/firego) or
+Check the [GoDocs](http://godoc.org/github.com/CloudCom/firego) or
 [Firebase Documentation](https://www.firebase.com/docs/rest/) for more details
 
 ## Issues Management
