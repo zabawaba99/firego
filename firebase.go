@@ -32,9 +32,21 @@ func sanitizeURL(url string) string {
 
 // New creates a new Firebase reference
 func New(url string) *Firebase {
+
+	// The article below explains how Amazon's ELB's to not always send the "close_notify packet"
+	// when using TLS.  By default the golang http client attempts to reuse connectons.  This
+	// caused an issue because, the server closed the connection, we never received the close_notify
+	// thus, golang http client tried to reuse a closed connection.  This issue does not happen all
+	// the time, but it did happen once in every 5 requests that are fired off one right after the
+	// other.  Note, the article below is for AWS, but seems to have the same issue with Firebase.
+	// The fix for me, is to disable the KeepAlives with really causes golang not to reause the
+	// connection.
+	// https://code.google.com/p/go/issues/detail?id=3514
+	tr := &http.Transport{DisableKeepAlives: true}
+
 	return &Firebase{
 		url:          sanitizeURL(url),
-		client:       &http.Client{},
+		client:       &http.Client{Transport: tr},
 		stopWatching: make(chan struct{}),
 	}
 }
