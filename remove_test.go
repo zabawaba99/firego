@@ -10,7 +10,7 @@ func TestRemove(t *testing.T) {
 	)
 	defer server.Close()
 
-	fb.Remove()
+	fb.Remove(nil)
 	if expected, actual := 1, len(server.receivedReqs); expected != actual {
 		t.Fatalf("Expected: %d\nActual: %d", expected, actual)
 	}

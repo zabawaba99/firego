@@ -11,7 +11,7 @@ func TestSet(t *testing.T) {
 	)
 	defer server.Close()
 
-	fb.Set(response)
+	fb.Set(response, nil)
 	if expected, actual := 1, len(server.receivedReqs); expected != actual {
 		t.Fatalf("Expected: %d\nActual: %d", expected, actual)
 	}

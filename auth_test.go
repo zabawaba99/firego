@@ -11,7 +11,7 @@ func TestAuth(t *testing.T) {
 	)
 	defer server.Close()
 	fb.Auth(token)
-	fb.Value("")
+	fb.Value("", nil)
 	if expected, actual := 1, len(server.receivedReqs); expected != actual {
 		t.Fatalf("Expected: %d\nActual: %d", expected, actual)
 	}
@@ -32,7 +32,7 @@ func TestUnauth(t *testing.T) {
 	defer server.Close()
 	fb.Auth(token)
 	fb.Unauth()
-	fb.Value("")
+	fb.Value("", nil)
 	if expected, actual := 1, len(server.receivedReqs); expected != actual {
 		t.Fatalf("Expected: %d\nActual: %d", expected, actual)
 	}
