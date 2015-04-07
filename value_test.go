@@ -31,7 +31,7 @@ func TestValue(t *testing.T) {
 	defer server.Close()
 
 	var v map[string]interface{}
-	fb.Value(&v)
+	fb.Value(&v, nil)
 
 	if val, ok := v["foo"]; !ok || val != "bar" {
 		t.Fatalf("Did not get valid response. Expected: %s\nActual: %s", response, v)
