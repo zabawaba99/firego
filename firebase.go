@@ -12,7 +12,7 @@ import (
 // Firebase represents a location in the cloud
 type Firebase struct {
 	url          string
-	auth         string
+	params       url.Values
 	client       *http.Client
 	watching     bool
 	stopWatching chan struct{}
@@ -31,7 +31,7 @@ func sanitizeURL(url string) string {
 }
 
 // New creates a new Firebase reference
-func New(url string) *Firebase {
+func New(u string) *Firebase {
 
 	// The article below explains how Amazon's ELB's to not always send the "close_notify packet"
 	// when using TLS.  By default the golang http client attempts to reuse connectons.  This
@@ -45,7 +45,8 @@ func New(url string) *Firebase {
 	tr := &http.Transport{DisableKeepAlives: true}
 
 	return &Firebase{
-		url:          sanitizeURL(url),
+		url:          sanitizeURL(u),
+		params:       url.Values{},
 		client:       &http.Client{Transport: tr},
 		stopWatching: make(chan struct{}),
 	}
@@ -62,7 +63,7 @@ func (fb *Firebase) String() string {
 func (fb *Firebase) Child(child string) *Firebase {
 	return &Firebase{
 		url:          fb.url + "/" + child,
-		auth:         fb.auth,
+		params:       fb.params,
 		client:       fb.client,
 		stopWatching: make(chan struct{}),
 	}
@@ -71,13 +72,8 @@ func (fb *Firebase) Child(child string) *Firebase {
 func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, error) {
 	path := fb.url + "/.json"
 
-	v := url.Values{}
-	if fb.auth != "" {
-		v.Add("auth", fb.auth)
-	}
-
-	if len(v) > 0 {
-		path += "?" + v.Encode()
+	if len(fb.params) > 0 {
+		path += "?" + fb.params.Encode()
 	}
 	return http.NewRequest(method, path, bytes.NewReader(body))
 }
