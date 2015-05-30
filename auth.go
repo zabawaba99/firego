@@ -1,7 +1,5 @@
 package firego
 
-const authParam = "auth"
-
 // Auth sets the custom Firebase token used to authenticate to Firebase
 func (fb *Firebase) Auth(token string) {
 	fb.params.Set(authParam, token)

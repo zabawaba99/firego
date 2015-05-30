@@ -9,6 +9,13 @@ import (
 	"strings"
 )
 
+// query parameter constants
+const (
+	authParam   = "auth"
+	formatParam = "format"
+	formatVal   = "export"
+)
+
 // Firebase represents a location in the cloud
 type Firebase struct {
 	url          string
@@ -66,6 +73,21 @@ func (fb *Firebase) Child(child string) *Firebase {
 		params:       fb.params,
 		client:       fb.client,
 		stopWatching: make(chan struct{}),
+	}
+}
+
+// IncludePriority determines whether or not to ask Firebase
+// for the values priority. By default, the priority is not returned
+//
+//		# Include Priority
+//		ref.IncludePriority(true)
+//		# Exclude Priority
+//		ref.IncludePriority(false)
+func (fb *Firebase) IncludePriority(v bool) {
+	if v {
+		fb.params.Set(formatParam, formatVal)
+	} else {
+		fb.params.Del(formatParam)
 	}
 }
 

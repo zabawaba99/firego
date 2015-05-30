@@ -43,3 +43,43 @@ func TestChild(t *testing.T) {
 		t.Fatalf("url not set corrected. Expected: %s\nActual: %s", expected, child.url)
 	}
 }
+
+func TestIncludePriority(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		priority bool
+	}{
+		{
+			true,
+		},
+		{
+			false,
+		},
+	}
+
+	for _, tt := range testCases {
+		var (
+			server = newTestServer("")
+			fb     = New(server.URL)
+		)
+		defer server.Close()
+		fb.IncludePriority(tt.priority)
+		fb.Value("")
+		if expected, actual := 1, len(server.receivedReqs); expected != actual {
+			t.Fatalf("Expected: %d\nActual: %d", expected, actual)
+		}
+
+		req := server.receivedReqs[0]
+		expected, actual := formatParam+"="+formatVal, req.URL.Query().Encode()
+
+		if tt.priority {
+			if expected != actual {
+				t.Fatalf("Expected: %s\nActual: %s", expected, actual)
+			}
+		} else {
+			if expected == actual {
+				t.Fatalf(`Expected: ""\nActual: %s`, actual)
+			}
+		}
+	}
+}
