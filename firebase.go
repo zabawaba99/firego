@@ -68,7 +68,7 @@ func (fb *Firebase) Child(child string) *Firebase {
 	}
 }
 
-func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
+func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, error) {
 	path := fb.url + "/.json"
 
 	v := url.Values{}
@@ -79,7 +79,11 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 	if len(v) > 0 {
 		path += "?" + v.Encode()
 	}
-	req, err := http.NewRequest(method, path, bytes.NewReader(body))
+	return http.NewRequest(method, path, bytes.NewReader(body))
+}
+
+func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
+	req, err := fb.makeRequest(method, body)
 	if err != nil {
 		return nil, err
 	}
