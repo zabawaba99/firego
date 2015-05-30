@@ -7,12 +7,21 @@ import (
 	"testing"
 )
 
+const testToken = "test_token"
+
 func newSSEServer(t *testing.T, event, path, data string, stop chan struct{}) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		flusher, ok := w.(http.Flusher)
 
 		if !ok {
 			t.Fatal("Streaming unsupported!")
+		}
+		req.ParseForm()
+
+		if req.Form.Get("auth") != testToken {
+			http.Error(w, "Permission denied", http.StatusUnauthorized)
+			flusher.Flush()
+			<-stop
 		}
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -43,6 +52,7 @@ func TestWatch(t *testing.T) {
 		server.Close()
 	}()
 
+	fb.Auth(testToken)
 	if err := fb.Watch(notifications); err != nil {
 		t.Fatal(err)
 	}
@@ -78,6 +88,7 @@ func TestStopWatch(t *testing.T) {
 		server.Close()
 	}()
 
+	fb.Auth(testToken)
 	go func() {
 		if err := fb.Watch(notifications); err != nil {
 			t.Fatal(err)
@@ -106,6 +117,7 @@ func TestWatch_Cancel(t *testing.T) {
 		server.Close()
 	}()
 
+	fb.Auth(testToken)
 	if err := fb.Watch(notifications); err != nil {
 		t.Fatal(err)
 	}
