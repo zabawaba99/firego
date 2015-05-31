@@ -5,21 +5,22 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"net/url"
+	_url "net/url"
 	"strings"
 )
 
 // query parameter constants
 const (
-	authParam   = "auth"
-	formatParam = "format"
-	formatVal   = "export"
+	authParam    = "auth"
+	formatParam  = "format"
+	shallowParam = "shallow"
+	formatVal    = "export"
 )
 
 // Firebase represents a location in the cloud
 type Firebase struct {
 	url          string
-	params       url.Values
+	params       _url.Values
 	client       *http.Client
 	watching     bool
 	stopWatching chan struct{}
@@ -38,7 +39,7 @@ func sanitizeURL(url string) string {
 }
 
 // New creates a new Firebase reference
-func New(u string) *Firebase {
+func New(url string) *Firebase {
 
 	// The article below explains how Amazon's ELB's to not always send the "close_notify packet"
 	// when using TLS.  By default the golang http client attempts to reuse connectons.  This
@@ -52,8 +53,8 @@ func New(u string) *Firebase {
 	tr := &http.Transport{DisableKeepAlives: true}
 
 	return &Firebase{
-		url:          sanitizeURL(u),
-		params:       url.Values{},
+		url:          sanitizeURL(url),
+		params:       _url.Values{},
 		client:       &http.Client{Transport: tr},
 		stopWatching: make(chan struct{}),
 	}
@@ -73,6 +74,20 @@ func (fb *Firebase) Child(child string) *Firebase {
 		params:       fb.params,
 		client:       fb.client,
 		stopWatching: make(chan struct{}),
+	}
+}
+
+// Shallow limits the depth of the data returned when calling Value.
+// If the data at the location is a JSON primitive (string, number or boolean),
+// its value will be returned. If the data is a JSON object, the values
+// for each key will be truncated to true.
+//
+// Reference https://www.firebase.com/docs/rest/api/#section-param-shallow
+func (fb *Firebase) Shallow(v bool) {
+	if v {
+		fb.params.Set(shallowParam, "true")
+	} else {
+		fb.params.Del(shallowParam)
 	}
 }
 
