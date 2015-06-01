@@ -5,14 +5,22 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
-	"net/url"
+	_url "net/url"
 	"strings"
+)
+
+// query parameter constants
+const (
+	authParam    = "auth"
+	formatParam  = "format"
+	shallowParam = "shallow"
+	formatVal    = "export"
 )
 
 // Firebase represents a location in the cloud
 type Firebase struct {
 	url          string
-	auth         string
+	params       _url.Values
 	client       *http.Client
 	watching     bool
 	stopWatching chan struct{}
@@ -46,6 +54,7 @@ func New(url string) *Firebase {
 
 	return &Firebase{
 		url:          sanitizeURL(url),
+		params:       _url.Values{},
 		client:       &http.Client{Transport: tr},
 		stopWatching: make(chan struct{}),
 	}
@@ -62,22 +71,46 @@ func (fb *Firebase) String() string {
 func (fb *Firebase) Child(child string) *Firebase {
 	return &Firebase{
 		url:          fb.url + "/" + child,
-		auth:         fb.auth,
+		params:       fb.params,
 		client:       fb.client,
 		stopWatching: make(chan struct{}),
+	}
+}
+
+// Shallow limits the depth of the data returned when calling Value.
+// If the data at the location is a JSON primitive (string, number or boolean),
+// its value will be returned. If the data is a JSON object, the values
+// for each key will be truncated to true.
+//
+// Reference https://www.firebase.com/docs/rest/api/#section-param-shallow
+func (fb *Firebase) Shallow(v bool) {
+	if v {
+		fb.params.Set(shallowParam, "true")
+	} else {
+		fb.params.Del(shallowParam)
+	}
+}
+
+// IncludePriority determines whether or not to ask Firebase
+// for the values priority. By default, the priority is not returned
+//
+//		# Include Priority
+//		ref.IncludePriority(true)
+//		# Exclude Priority
+//		ref.IncludePriority(false)
+func (fb *Firebase) IncludePriority(v bool) {
+	if v {
+		fb.params.Set(formatParam, formatVal)
+	} else {
+		fb.params.Del(formatParam)
 	}
 }
 
 func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, error) {
 	path := fb.url + "/.json"
 
-	v := url.Values{}
-	if fb.auth != "" {
-		v.Add("auth", fb.auth)
-	}
-
-	if len(v) > 0 {
-		path += "?" + v.Encode()
+	if len(fb.params) > 0 {
+		path += "?" + fb.params.Encode()
 	}
 	return http.NewRequest(method, path, bytes.NewReader(body))
 }
