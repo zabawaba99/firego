@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type TestServer struct {
@@ -32,17 +35,12 @@ func TestValue(t *testing.T) {
 
 	var v map[string]interface{}
 	fb.Value(&v)
+	val, ok := v["foo"]
+	assert.True(t, ok)
+	assert.Equal(t, "bar", val)
 
-	if val, ok := v["foo"]; !ok || val != "bar" {
-		t.Fatalf("Did not get valid response. Expected: %s\nActual: %s", response, v)
-	}
-
-	if expected, actual := 1, len(server.receivedReqs); expected != actual {
-		t.Fatalf("Expected: %d\nActual: %d", expected, actual)
-	}
+	require.Len(t, server.receivedReqs, 1)
 
 	req := server.receivedReqs[0]
-	if expected, actual := "GET", req.Method; expected != actual {
-		t.Fatalf("Expected: %s\nActual: %s", expected, actual)
-	}
+	assert.Equal(t, "GET", req.Method)
 }

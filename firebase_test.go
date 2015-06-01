@@ -1,6 +1,12 @@
 package firego
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
 const URL = "https://somefirebaseapp.firebaseIO.com"
 
@@ -25,9 +31,7 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range testCases {
 		fb := New(tt.givenURL)
-		if fb.url != URL {
-			t.Fatalf("url not set correctly. Expected: %s\nActual: %s", URL, fb.url)
-		}
+		assert.Equal(t, URL, fb.url, "givenURL: %s", tt.givenURL)
 	}
 }
 
@@ -39,87 +43,51 @@ func TestChild(t *testing.T) {
 		child     = parent.Child(childNode)
 	)
 
-	if expected := parent.url + "/" + childNode; child.url != expected {
-		t.Fatalf("url not set corrected. Expected: %s\nActual: %s", expected, child.url)
-	}
+	assert.Equal(t, fmt.Sprintf("%s/%s", parent.url, childNode), child.url)
 }
 
 func TestShallow(t *testing.T) {
 	t.Parallel()
-	testCases := []struct {
-		shallow bool
-	}{
-		{
-			true,
-		},
-		{
-			false,
-		},
-	}
+	var (
+		server = newTestServer("")
+		fb     = New(server.URL)
+	)
+	defer server.Close()
 
-	for _, tt := range testCases {
-		var (
-			server = newTestServer("")
-			fb     = New(server.URL)
-		)
-		defer server.Close()
-		fb.Shallow(tt.shallow)
-		fb.Value("")
-		if expected, actual := 1, len(server.receivedReqs); expected != actual {
-			t.Fatalf("Expected: %d\nActual: %d", expected, actual)
-		}
+	fb.Shallow(true)
+	fb.Value("")
+	require.Len(t, server.receivedReqs, 1)
 
-		req := server.receivedReqs[0]
-		expected, actual := shallowParam+"=true", req.URL.Query().Encode()
+	req := server.receivedReqs[0]
+	assert.Equal(t, shallowParam+"=true", req.URL.Query().Encode())
 
-		if tt.shallow {
-			if expected != actual {
-				t.Fatalf("Expected: %s\nActual: %s", expected, actual)
-			}
-		} else {
-			if expected == actual {
-				t.Fatalf(`Expected: ""\nActual: %s`, actual)
-			}
-		}
-	}
+	fb.Shallow(false)
+	fb.Value("")
+	require.Len(t, server.receivedReqs, 2)
+
+	req = server.receivedReqs[1]
+	assert.Equal(t, "", req.URL.Query().Encode())
 }
 
 func TestIncludePriority(t *testing.T) {
 	t.Parallel()
-	testCases := []struct {
-		priority bool
-	}{
-		{
-			true,
-		},
-		{
-			false,
-		},
-	}
+	var (
+		server = newTestServer("")
+		fb     = New(server.URL)
+	)
+	defer server.Close()
 
-	for _, tt := range testCases {
-		var (
-			server = newTestServer("")
-			fb     = New(server.URL)
-		)
-		defer server.Close()
-		fb.IncludePriority(tt.priority)
-		fb.Value("")
-		if expected, actual := 1, len(server.receivedReqs); expected != actual {
-			t.Fatalf("Expected: %d\nActual: %d", expected, actual)
-		}
+	fb.IncludePriority(true)
+	fb.Value("")
+	require.Len(t, server.receivedReqs, 1)
 
-		req := server.receivedReqs[0]
-		expected, actual := formatParam+"="+formatVal, req.URL.Query().Encode()
+	req := server.receivedReqs[0]
+	assert.Equal(t, formatParam+"="+formatVal, req.URL.Query().Encode())
 
-		if tt.priority {
-			if expected != actual {
-				t.Fatalf("Expected: %s\nActual: %s", expected, actual)
-			}
-		} else {
-			if expected == actual {
-				t.Fatalf(`Expected: ""\nActual: %s`, actual)
-			}
-		}
-	}
+	fb.IncludePriority(false)
+	fb.Value("")
+	require.Len(t, server.receivedReqs, 2)
+
+	req = server.receivedReqs[1]
+	assert.Equal(t, "", req.URL.Query().Encode())
 }

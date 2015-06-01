@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const testToken = "test_token"
@@ -58,20 +61,10 @@ func TestWatch(t *testing.T) {
 	}
 
 	event, ok := <-notifications
-	if !ok {
-		t.Fatal("notifications closed")
-	}
-	if event.Type != eventType {
-		t.Fatalf("Expected: %s\nActual: %s", eventType, event.Type)
-	}
-
-	if event.Path != path {
-		t.Fatalf("Expected: %s\nActual: %s", path, event.Path)
-	}
-
-	if event.Data.(string) != data {
-		t.Fatalf("Expected: %s\nActual: %s", data, event.Data)
-	}
+	require.True(t, ok, "notifications closed")
+	assert.Equal(t, eventType, event.Type, "event type doesn't match")
+	assert.Equal(t, path, event.Path, "event path doesn't match")
+	assert.Equal(t, data, event.Data.(string), "event data doesn't match")
 }
 
 func TestStopWatch(t *testing.T) {
@@ -99,9 +92,8 @@ func TestStopWatch(t *testing.T) {
 
 	<-notifications
 	moveOn <- struct{}{}
-	if _, ok := <-notifications; ok {
-		t.Fatal("notifications should be closed")
-	}
+	_, ok := <-notifications
+	assert.False(t, ok, "notifications should be closed")
 }
 
 func TestWatch_Cancel(t *testing.T) {
@@ -123,15 +115,9 @@ func TestWatch_Cancel(t *testing.T) {
 	}
 
 	event, ok := <-notifications
-	if !ok {
-		t.Fatal("notifications closed")
-	}
+	require.True(t, ok, "notifications closed")
+	assert.Equal(t, eventType, event.Type, "event type doesn't match")
 
-	if event.Type != eventType {
-		t.Fatalf("Expected: %s\nActual: %s", eventType, event.Type)
-	}
-
-	if _, ok := <-notifications; ok {
-		t.Fatal("notifications should be closed")
-	}
+	_, ok = <-notifications
+	require.False(t, ok, "notifications should be closed")
 }
