@@ -94,6 +94,13 @@ if err := f.Remove(); err != nil {
 Check the [GoDocs](http://godoc.org/github.com/CloudCom/firego) or
 [Firebase Documentation](https://www.firebase.com/docs/rest/) for more details
 
+## Running Tests
+
+In order to run the tests you need to `go get`:
+
+* `github.com/stretchr/testify/require`
+* `github.com/stretchr/testify/assert`
+
 ## Issues Management
 
 Feel free to open an issue if you come across any bugs or

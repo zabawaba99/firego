@@ -1,6 +1,11 @@
 package firego
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
 func TestSet(t *testing.T) {
 	t.Parallel()
@@ -12,12 +17,8 @@ func TestSet(t *testing.T) {
 	defer server.Close()
 
 	fb.Set(response)
-	if expected, actual := 1, len(server.receivedReqs); expected != actual {
-		t.Fatalf("Expected: %d\nActual: %d", expected, actual)
-	}
+	require.Len(t, server.receivedReqs, 1)
 
 	req := server.receivedReqs[0]
-	if expected, actual := "PUT", req.Method; expected != actual {
-		t.Fatalf("Expected: %s\nActual: %s", expected, actual)
-	}
+	assert.Equal(t, "PUT", req.Method)
 }
