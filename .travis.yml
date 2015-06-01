@@ -6,8 +6,36 @@ go:
   - tip
 
 before_install:
+  # linting tools
+  - go get github.com/golang/lint/golint
+  - go get golang.org/x/tools/cmd/vet
+  - go get github.com/fzipp/gocyclo
+
+  # code coverage
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
   - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
+
+install:
+  # make sure stuff actually builds
+  - go build
+
 script:
-    - $HOME/gopath/bin/goveralls -service=travis-ci -repotoken=$COVERALLS
+  # ensure everything is formatted all pretty like
+  - gofmt -l -s .
+  # vet out possible issues
+  - go vet ./...
+  # run tests
+  - go get -t
+  - $HOME/gopath/bin/goveralls -service=travis-ci -repotoken=$COVERALLS -v
+
+after_script:
+  # check possible styling errors
+  - golint ./...
+  # check for potentially complex functions but don't false build
+  - gocyclo -over 15 . || true
+  # refresh godocs in case there were api changes
+  - |
+    if [[ "$TRAVIS_PULL_REQUEST" == "false" ]] && [[ "$TRAVIS_BRANCH" == "master" ]]; then
+      go list ./... | xargs -n 1 -I{} curl http://godoc.org/-/refresh -d path={}
+    fi
