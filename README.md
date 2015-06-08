@@ -28,6 +28,16 @@ Create a new firego reference
 f := firego.New("https://my-firebase-app.firebaseIO.com")
 ```
 
+### Request Timeouts
+
+By default, the `Firebase` reference will timeout after 30 seconds of trying
+to reach a Firebase server. You can configure this value by setting the global
+timeout duration
+
+```go
+firego.TimeoutDuration = time.Minute
+```
+
 ### Auth Tokens
 
 ```go
