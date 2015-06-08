@@ -2,7 +2,10 @@ package firego
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,6 +47,17 @@ func TestChild(t *testing.T) {
 	)
 
 	assert.Equal(t, fmt.Sprintf("%s/%s", parent.url, childNode), child.url)
+}
+
+func TestTimeoutDuration(t *testing.T) {
+	TimeoutDuration = time.Millisecond
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		time.Sleep(2 * TimeoutDuration)
+	}))
+
+	fb := New(server.URL)
+	err := fb.Value("")
+	assert.NotNil(t, err)
 }
 
 func TestShallow(t *testing.T) {

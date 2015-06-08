@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"io/ioutil"
+	"net"
 	"net/http"
 	_url "net/url"
 	"strings"
+	"time"
 )
+
+var TimeoutDuration = 30 * time.Second
 
 // query parameter constants
 const (
@@ -50,7 +54,12 @@ func New(url string) *Firebase {
 	// The fix for me, is to disable the KeepAlives with really causes golang not to reause the
 	// connection.
 	// https://code.google.com/p/go/issues/detail?id=3514
-	tr := &http.Transport{DisableKeepAlives: true}
+	tr := &http.Transport{
+		DisableKeepAlives: true,
+		Dial: func(network, address string) (net.Conn, error) {
+			return net.DialTimeout(network, address, TimeoutDuration)
+		},
+	}
 
 	return &Firebase{
 		url:          sanitizeURL(url),
