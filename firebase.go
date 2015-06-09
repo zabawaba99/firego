@@ -143,6 +143,10 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 		if e1.Timeout() {
 			return nil, ErrTimeout{err}
 		}
+	case net.Error:
+		if err.Timeout() {
+			return nil, ErrTimeout{err}
+		}
 	}
 
 	defer resp.Body.Close()
