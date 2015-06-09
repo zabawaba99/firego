@@ -13,6 +13,10 @@ import (
 
 var TimeoutDuration = 30 * time.Second
 
+type ErrTimeout struct {
+	error
+}
+
 // query parameter constants
 const (
 	authParam    = "auth"
@@ -126,8 +130,19 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 	}
 
 	resp, err := fb.client.Do(req)
-	if err != nil {
+	switch err := err.(type) {
+	default:
 		return nil, err
+	case nil:
+		// carry on
+	case *_url.Error:
+		e1, ok := err.Err.(net.Error)
+		if !ok {
+			return nil, err
+		}
+		if e1.Timeout() {
+			return nil, ErrTimeout{err}
+		}
 	}
 
 	defer resp.Body.Close()
