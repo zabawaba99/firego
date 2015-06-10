@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 	"time"
 
@@ -50,10 +49,6 @@ func TestChild(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s/%s", parent.url, childNode), child.url)
 }
 
-type timeout interface {
-	Timeout() bool
-}
-
 func TestTimeoutDuration_Headers(t *testing.T) {
 	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
 	TimeoutDuration = time.Millisecond
@@ -66,12 +61,13 @@ func TestTimeoutDuration_Headers(t *testing.T) {
 	fb := New(server.URL)
 	err := fb.Value("")
 	assert.NotNil(t, err)
-	e1 := err.(*url.Error).Err.(timeout)
-	assert.True(t, e1.Timeout())
+	assert.IsType(t, ErrTimeout{}, err)
 
 	// ResponseHeaderTimeout should be TimeoutDuration less the time it took to dial, and should be positive
-	assert.True(t, fb.client.Transport.(*http.Transport).ResponseHeaderTimeout < TimeoutDuration)
-	assert.True(t, fb.client.Transport.(*http.Transport).ResponseHeaderTimeout > 0)
+	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
+	tr := fb.client.Transport.(*http.Transport)
+	assert.True(t, tr.ResponseHeaderTimeout < TimeoutDuration)
+	assert.True(t, tr.ResponseHeaderTimeout > 0)
 }
 
 func TestTimeoutDuration_Dial(t *testing.T) {
@@ -81,10 +77,10 @@ func TestTimeoutDuration_Dial(t *testing.T) {
 	fb := New("http://dialtimeouterr.or/")
 	err := fb.Value("")
 	assert.NotNil(t, err)
-	e1 := err.(*url.Error).Err.(timeout)
-	assert.True(t, e1.Timeout())
+	assert.IsType(t, ErrTimeout{}, err)
 
 	// ResponseHeaderTimeout should be negative since the total duration was consumed when dialing
+	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
 	assert.True(t, fb.client.Transport.(*http.Transport).ResponseHeaderTimeout < 0)
 }
 

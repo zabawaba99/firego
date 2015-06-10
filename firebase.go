@@ -13,6 +13,10 @@ import (
 
 var TimeoutDuration = 30 * time.Second
 
+type ErrTimeout struct {
+	error
+}
+
 // query parameter constants
 const (
 	authParam    = "auth"
@@ -126,7 +130,29 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 	}
 
 	resp, err := fb.client.Do(req)
-	if err != nil {
+	switch err := err.(type) {
+	default:
+		return nil, err
+	case nil:
+		// carry on
+
+	case *_url.Error:
+		// `http.Client.Do` will return a `url.Error` that wraps a `net.Error`
+		// when exceeding it's `Transport`'s `ResponseHeadersTimeout`
+		e1, ok := err.Err.(net.Error)
+		if ok && e1.Timeout() {
+			return nil, ErrTimeout{err}
+		}
+
+		return nil, err
+
+	case net.Error:
+		// `http.Client.Do` will return a `net.Error` directly when Dial times
+		// out, or when the Client's RoundTripper otherwise returns an err
+		if err.Timeout() {
+			return nil, ErrTimeout{err}
+		}
+
 		return nil, err
 	}
 
