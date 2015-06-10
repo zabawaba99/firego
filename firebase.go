@@ -135,18 +135,25 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 		return nil, err
 	case nil:
 		// carry on
+
 	case *_url.Error:
+		// `http.Client.Do` will return a `url.Error` that wraps a `net.Error`
+		// when exceeding it's `Transport`'s `ResponseHeadersTimeout`
 		e1, ok := err.Err.(net.Error)
-		if !ok {
-			return nil, err
-		}
-		if e1.Timeout() {
+		if ok && e1.Timeout() {
 			return nil, ErrTimeout{err}
 		}
+
+		return nil, err
+
 	case net.Error:
+		// `http.Client.Do` will return a `net.Error` directly when Dial times
+		// out, or when the Client's RoundTripper otherwise returns an err
 		if err.Timeout() {
 			return nil, ErrTimeout{err}
 		}
+
+		return nil, err
 	}
 
 	defer resp.Body.Close()
