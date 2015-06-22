@@ -8,9 +8,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"strings"
 )
 
 const testToken = "test_token"
+
+func setupLargeResult() string {
+	return "start" + strings.Repeat("0", 64*1024) + "end"
+}
 
 func newSSEServer(t *testing.T, event, path, data string, stop chan struct{}) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -45,7 +50,7 @@ func newSSEServer(t *testing.T, event, path, data string, stop chan struct{}) *h
 func TestWatch(t *testing.T) {
 	t.Parallel()
 	var (
-		eventType, path, data = "put", "foo", "bar"
+		eventType, path, data = "put", "foo", setupLargeResult()
 		notifications, stop   = make(chan Event), make(chan struct{})
 		server                = newSSEServer(t, eventType, path, data, stop)
 		fb                    = New(server.URL)
@@ -70,7 +75,7 @@ func TestWatch(t *testing.T) {
 func TestStopWatch(t *testing.T) {
 	t.Parallel()
 	var (
-		eventType, path, data = "put", "foo", "bar"
+		eventType, path, data = "put", "foo", setupLargeResult()
 		moveOn, stop          = make(chan struct{}), make(chan struct{})
 		notifications         = make(chan Event)
 		server                = newSSEServer(t, eventType, path, data, stop)
@@ -89,7 +94,6 @@ func TestStopWatch(t *testing.T) {
 		<-moveOn
 		fb.StopWatching()
 	}()
-
 	<-notifications
 	moveOn <- struct{}{}
 	_, ok := <-notifications
