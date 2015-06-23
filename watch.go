@@ -84,6 +84,9 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			// 1. step: scan for the 'event:' part. ReadLine() oes not return the \n
 			// so we have to add it to our result buffer.
 			evt, isPrefix, scanResult = scanner.ReadLine()
+			if scanResult != nil {
+				break scanning
+			}
 			result = append(result, evt...)
 			result = append(result, '\n')
 
@@ -92,6 +95,9 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			// isPrefix will be true until all data is read.
 			for {
 				dat, isPrefix, scanResult = scanner.ReadLine()
+				if scanResult != nil {
+					break scanning
+				}
 				result = append(result, dat...)
 				if !isPrefix {
 					break
@@ -101,7 +107,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			result = append(result, '\n')
 			_, _, scanResult = scanner.ReadLine()
 			if scanResult != nil {
-				log.Println(scanResult)
+				break scanning
 			}
 
 			txt := string(result)
@@ -144,8 +150,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 
 				// TODO: handle
 			case "rules_debug":
-
-				// TODO: handle
+				log.Printf("Rules-Debug: %s\n", txt)
 			}
 		}
 
