@@ -59,9 +59,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	// start parsing response body
 	go func() {
 		// build scanner for response body
-		scanner := bufio.NewScanner(resp.Body)
-		// set custom split function for SSE events
-		scanner.Split(eventSplit)
+		scanner := bufio.NewReader(resp.Body)
+		var scanResult error
 
 		// monitor the stopWatching channel
 		// if we're told to stop, close the response Body
@@ -70,11 +69,49 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			resp.Body.Close()
 		}()
 	scanning:
-		for scanner.Scan() {
+		for scanResult == nil {
 			// split event string
 			// 		event: put
 			// 		data: {"path":"/","data":{"foo":"bar"}}
-			parts := strings.Split(scanner.Text(), "\n")
+
+			var evt []byte
+			var dat []byte
+			isPrefix := true
+			var result []byte
+
+			// For possible results larger than 64 * 1024 bytes (MaxTokenSize)
+			// we need bufio#ReadLine()
+			// 1. step: scan for the 'event:' part. ReadLine() oes not return the \n
+			// so we have to add it to our result buffer.
+			evt, isPrefix, scanResult = scanner.ReadLine()
+			if scanResult != nil {
+				break scanning
+			}
+			result = append(result, evt...)
+			result = append(result, '\n')
+
+			// 2. step: scan for the 'data:' part. Firebase returns just one 'data:'
+			// part, but the value can be very large. If we exceed a certain length
+			// isPrefix will be true until all data is read.
+			for {
+				dat, isPrefix, scanResult = scanner.ReadLine()
+				if scanResult != nil {
+					break scanning
+				}
+				result = append(result, dat...)
+				if !isPrefix {
+					break
+				}
+			}
+			// Again we add the \n
+			result = append(result, '\n')
+			_, _, scanResult = scanner.ReadLine()
+			if scanResult != nil {
+				break scanning
+			}
+
+			txt := string(result)
+			parts := strings.Split(txt, "\n")
 
 			// create a base event
 			event := Event{
@@ -112,6 +149,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 				// This event will be sent when the supplied auth parameter is no longer valid
 
 				// TODO: handle
+			case "rules_debug":
+				log.Printf("Rules-Debug: %s\n", txt)
 			}
 		}
 
@@ -119,32 +158,6 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 		fb.StopWatching()
 		close(notifications)
 
-		if err := scanner.Err(); err != nil {
-			log.Printf("Error: %s\n", err)
-		}
 	}()
 	return nil
-}
-
-func eventSplit(data []byte, atEOF bool) (int, []byte, error) {
-	var (
-		token   []byte
-		advance int
-		found   bool
-	)
-
-	for _, b := range data {
-		token = append(token, b)
-		advance++
-
-		if b == '\n' {
-			if found {
-				break
-			}
-			found = true
-		} else {
-			found = false
-		}
-	}
-	return advance, token, nil
 }
