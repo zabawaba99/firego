@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// TimeoutDuration is the length of time any request will to establish
+// TimeoutDuration is the length of time any request will have to establish
 // a connection and receive headers from Firebase before returning
 // an ErrTimeout error
 var TimeoutDuration = 30 * time.Second
