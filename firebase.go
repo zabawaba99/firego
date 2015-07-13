@@ -110,10 +110,7 @@ func (fb *Firebase) Shallow(v bool) {
 // IncludePriority determines whether or not to ask Firebase
 // for the values priority. By default, the priority is not returned
 //
-//		# Include Priority
-//		ref.IncludePriority(true)
-//		# Exclude Priority
-//		ref.IncludePriority(false)
+// Reference https://www.firebase.com/docs/rest/api/#section-param-format
 func (fb *Firebase) IncludePriority(v bool) {
 	if v {
 		fb.params.Set(formatParam, formatVal)
