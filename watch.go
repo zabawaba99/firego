@@ -60,7 +60,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	go func() {
 		// build scanner for response body
 		scanner := bufio.NewReader(resp.Body)
-		var scanResult error
+		var scanErr error
 
 		// monitor the stopWatching channel
 		// if we're told to stop, close the response Body
@@ -69,7 +69,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			resp.Body.Close()
 		}()
 	scanning:
-		for scanResult == nil {
+		for scanErr == nil {
 			// split event string
 			// 		event: put
 			// 		data: {"path":"/","data":{"foo":"bar"}}
@@ -83,8 +83,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			// we need bufio#ReadLine()
 			// 1. step: scan for the 'event:' part. ReadLine() oes not return the \n
 			// so we have to add it to our result buffer.
-			evt, isPrefix, scanResult = scanner.ReadLine()
-			if scanResult != nil {
+			evt, isPrefix, scanErr = scanner.ReadLine()
+			if scanErr != nil {
 				break scanning
 			}
 			result = append(result, evt...)
@@ -94,8 +94,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			// part, but the value can be very large. If we exceed a certain length
 			// isPrefix will be true until all data is read.
 			for {
-				dat, isPrefix, scanResult = scanner.ReadLine()
-				if scanResult != nil {
+				dat, isPrefix, scanErr = scanner.ReadLine()
+				if scanErr != nil {
 					break scanning
 				}
 				result = append(result, dat...)
@@ -105,8 +105,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			}
 			// Again we add the \n
 			result = append(result, '\n')
-			_, _, scanResult = scanner.ReadLine()
-			if scanResult != nil {
+			_, _, scanErr = scanner.ReadLine()
+			if scanErr != nil {
 				break scanning
 			}
 
