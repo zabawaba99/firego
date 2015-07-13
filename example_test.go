@@ -105,7 +105,7 @@ func ExampleFirebase_StopWatching() {
 	}
 
 	go func() {
-		for range notifications {
+		for _ = range notifications {
 		}
 		log.Println("Channel closed")
 	}()
