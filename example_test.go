@@ -92,8 +92,8 @@ func ExampleFirebase_Watch() {
 	for event := range notifications {
 		log.Println("Event Received")
 		log.Printf("Type: %s\n", event.Type)
-		log.Printf("Type: %s\n", event.Path)
-		log.Printf("Type: %v\n", event.Data)
+		log.Printf("Path: %s\n", event.Path)
+		log.Printf("Data: %v\n", event.Data)
 		if event.Type == firego.EventTypeError {
 			log.Print("Error occurred, loop ending")
 		}
