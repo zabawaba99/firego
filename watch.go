@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+// EventTypeError is the type that is set on an Event struct if an
+// error occurs while watching a Firebase reference
+const EventTypeError = "event_error"
+
 // Event represents a notification received when watching a
 // firebase reference
 type Event struct {
@@ -60,16 +64,18 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	go func() {
 		// build scanner for response body
 		scanner := bufio.NewReader(resp.Body)
-		var scanResult error
+		var scanErr error
+		var closedManually bool
 
 		// monitor the stopWatching channel
 		// if we're told to stop, close the response Body
 		go func() {
 			<-fb.stopWatching
+			closedManually = true
 			resp.Body.Close()
 		}()
 	scanning:
-		for scanResult == nil {
+		for scanErr == nil {
 			// split event string
 			// 		event: put
 			// 		data: {"path":"/","data":{"foo":"bar"}}
@@ -83,8 +89,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			// we need bufio#ReadLine()
 			// 1. step: scan for the 'event:' part. ReadLine() oes not return the \n
 			// so we have to add it to our result buffer.
-			evt, isPrefix, scanResult = scanner.ReadLine()
-			if scanResult != nil {
+			evt, isPrefix, scanErr = scanner.ReadLine()
+			if scanErr != nil {
 				break scanning
 			}
 			result = append(result, evt...)
@@ -94,8 +100,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			// part, but the value can be very large. If we exceed a certain length
 			// isPrefix will be true until all data is read.
 			for {
-				dat, isPrefix, scanResult = scanner.ReadLine()
-				if scanResult != nil {
+				dat, isPrefix, scanErr = scanner.ReadLine()
+				if scanErr != nil {
 					break scanning
 				}
 				result = append(result, dat...)
@@ -105,8 +111,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			}
 			// Again we add the \n
 			result = append(result, '\n')
-			_, _, scanResult = scanner.ReadLine()
-			if scanResult != nil {
+			_, _, scanErr = scanner.ReadLine()
+			if scanErr != nil {
 				break scanning
 			}
 
@@ -125,7 +131,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 				// the extra data is in json format
 				var data map[string]interface{}
 				if err := json.Unmarshal([]byte(strings.Replace(parts[1], "data: ", "", 1)), &data); err != nil {
-					log.Fatal(err)
+					scanErr = err
+					break scanning
 				}
 
 				// set the extra fields
@@ -151,6 +158,14 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 				// TODO: handle
 			case "rules_debug":
 				log.Printf("Rules-Debug: %s\n", txt)
+			}
+		}
+
+		// check error type
+		if !closedManually && scanErr != nil {
+			notifications <- Event{
+				Type: EventTypeError,
+				Data: scanErr,
 			}
 		}
 
