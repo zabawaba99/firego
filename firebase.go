@@ -11,6 +11,7 @@ import (
 	"net/http"
 	_url "net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -35,9 +36,11 @@ const (
 
 // Firebase represents a location in the cloud
 type Firebase struct {
-	url          string
-	params       _url.Values
-	client       *http.Client
+	url    string
+	params _url.Values
+	client *http.Client
+
+	watchMtx     sync.Mutex
 	watching     bool
 	stopWatching chan struct{}
 }
