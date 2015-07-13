@@ -1,3 +1,6 @@
+/*
+Package firego is a REST client for Firebase (https://firebase.com).
+*/
 package firego
 
 import (
@@ -11,8 +14,13 @@ import (
 	"time"
 )
 
+// TimeoutDuration is the length of time any request will to establish
+// a connection and receive headers from Firebase before returning
+// an ErrTimeout error
 var TimeoutDuration = 30 * time.Second
 
+// ErrTimeout is an error type is that is returned if a request
+// exceeds the TimeoutDuration configured
 type ErrTimeout struct {
 	error
 }
@@ -75,7 +83,7 @@ func (fb *Firebase) String() string {
 }
 
 // Child creates a new Firebase reference for the requested
-// child string
+// child with the same configuration as the parent
 func (fb *Firebase) Child(child string) *Firebase {
 	return &Firebase{
 		url:          fb.url + "/" + child,
