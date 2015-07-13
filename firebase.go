@@ -1,3 +1,6 @@
+/*
+Package firego is a REST client for Firebase (https://firebase.com).
+*/
 package firego
 
 import (
@@ -11,8 +14,13 @@ import (
 	"time"
 )
 
+// TimeoutDuration is the length of time any request will have to establish
+// a connection and receive headers from Firebase before returning
+// an ErrTimeout error
 var TimeoutDuration = 30 * time.Second
 
+// ErrTimeout is an error type is that is returned if a request
+// exceeds the TimeoutDuration configured
 type ErrTimeout struct {
 	error
 }
@@ -75,7 +83,7 @@ func (fb *Firebase) String() string {
 }
 
 // Child creates a new Firebase reference for the requested
-// child string
+// child with the same configuration as the parent
 func (fb *Firebase) Child(child string) *Firebase {
 	return &Firebase{
 		url:          fb.url + "/" + child,
@@ -102,10 +110,7 @@ func (fb *Firebase) Shallow(v bool) {
 // IncludePriority determines whether or not to ask Firebase
 // for the values priority. By default, the priority is not returned
 //
-//		# Include Priority
-//		ref.IncludePriority(true)
-//		# Exclude Priority
-//		ref.IncludePriority(false)
+// Reference https://www.firebase.com/docs/rest/api/#section-param-format
 func (fb *Firebase) IncludePriority(v bool) {
 	if v {
 		fb.params.Set(formatParam, formatVal)
