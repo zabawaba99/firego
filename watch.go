@@ -131,7 +131,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 				// the extra data is in json format
 				var data map[string]interface{}
 				if err := json.Unmarshal([]byte(strings.Replace(parts[1], "data: ", "", 1)), &data); err != nil {
-					log.Fatal(err)
+					scanErr = err
+					break scanning
 				}
 
 				// set the extra fields
