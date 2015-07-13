@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+// EventTypeError is the type that is set on an Event struct if an
+// error occurs while watching a Firebase reference
+const EventTypeError = "event_error"
+
 // Event represents a notification received when watching a
 // firebase reference
 type Event struct {
@@ -61,11 +65,13 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 		// build scanner for response body
 		scanner := bufio.NewReader(resp.Body)
 		var scanErr error
+		var closedManually bool
 
 		// monitor the stopWatching channel
 		// if we're told to stop, close the response Body
 		go func() {
 			<-fb.stopWatching
+			closedManually = true
 			resp.Body.Close()
 		}()
 	scanning:
@@ -151,6 +157,14 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 				// TODO: handle
 			case "rules_debug":
 				log.Printf("Rules-Debug: %s\n", txt)
+			}
+		}
+
+		// check error type
+		if !closedManually && scanErr != nil {
+			notifications <- Event{
+				Type: EventTypeError,
+				Data: scanErr,
 			}
 		}
 
