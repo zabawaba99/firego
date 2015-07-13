@@ -2,6 +2,7 @@ package firego_test
 
 import (
 	"log"
+	"time"
 
 	"github.com/CloudCom/firego"
 )
@@ -94,4 +95,21 @@ func ExampleFirebase_Watch() {
 		log.Printf("Type: %s\n", event.Path)
 		log.Printf("Type: %v\n", event.Data)
 	}
+}
+
+func ExampleFirebase_StopWatching() {
+	fb := firego.New("https://someapp.firebaseio.com/some/value")
+	notifications := make(chan firego.Event)
+	if err := fb.Watch(notifications); err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		for range notifications {
+		}
+		log.Println("Channel closed")
+	}()
+	time.Sleep(10 * time.Millisecond) // let go routine start
+
+	fb.StopWatching()
 }
