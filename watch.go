@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"sync"
 )
 
 // EventTypeError is the type that is set on an Event struct if an
@@ -24,12 +25,25 @@ type Event struct {
 
 // StopWatching stops tears down all connections that are watching
 func (fb *Firebase) StopWatching() {
-	if fb.watching {
+	if fb.isWatching() {
 		// signal connection to terminal
 		fb.stopWatching <- struct{}{}
 		// flip the bit back to not watching
-		fb.watching = false
+		fb.setWatching(false)
 	}
+}
+
+func (fb *Firebase) isWatching() bool {
+	fb.watchMtx.Lock()
+	v := fb.watching
+	fb.watchMtx.Unlock()
+	return v
+}
+
+func (fb *Firebase) setWatching(v bool) {
+	fb.watchMtx.Lock()
+	fb.watching = v
+	fb.watchMtx.Unlock()
 }
 
 // Watch listens for changes on a firebase instance and
@@ -39,14 +53,17 @@ func (fb *Firebase) StopWatching() {
 // second call to this function without a call to fb.StopWatching
 // will close the channel given and return nil immediately
 func (fb *Firebase) Watch(notifications chan Event) error {
-	if fb.watching {
+	if fb.isWatching() {
 		close(notifications)
 		return nil
 	}
+	// set watching flag
+	fb.setWatching(true)
 
 	// build SSE request
 	req, err := fb.makeRequest("GET", nil)
 	if err != nil {
+		fb.setWatching(false)
 		return err
 	}
 	req.Header.Add("Accept", "text/event-stream")
@@ -54,24 +71,29 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	// do request
 	resp, err := fb.client.Do(req)
 	if err != nil {
+		fb.setWatching(false)
 		return err
 	}
-
-	// set watching flag
-	fb.watching = true
 
 	// start parsing response body
 	go func() {
 		// build scanner for response body
 		scanner := bufio.NewReader(resp.Body)
-		var scanErr error
-		var closedManually bool
+		var (
+			scanErr        error
+			closedManually bool
+			mtx            sync.Mutex
+		)
 
 		// monitor the stopWatching channel
 		// if we're told to stop, close the response Body
 		go func() {
 			<-fb.stopWatching
+
+			mtx.Lock()
 			closedManually = true
+			mtx.Unlock()
+
 			resp.Body.Close()
 		}()
 	scanning:
@@ -162,7 +184,10 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 		}
 
 		// check error type
-		if !closedManually && scanErr != nil {
+		mtx.Lock()
+		closed := closedManually
+		mtx.Unlock()
+		if !closed && scanErr != nil {
 			notifications <- Event{
 				Type: EventTypeError,
 				Data: scanErr,
