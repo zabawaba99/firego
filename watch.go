@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"sync"
 )
 
 // EventTypeError is the type that is set on an Event struct if an
@@ -78,17 +79,20 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	go func() {
 		// build scanner for response body
 		scanner := bufio.NewReader(resp.Body)
-		var scanErr error
-		var closedManually bool
+		var (
+			scanErr        error
+			closedManually bool
+			mtx            sync.Mutex
+		)
 
 		// monitor the stopWatching channel
 		// if we're told to stop, close the response Body
 		go func() {
 			<-fb.stopWatching
 
-			fb.watchMtx.Lock()
+			mtx.Lock()
 			closedManually = true
-			fb.watchMtx.Unlock()
+			mtx.Unlock()
 
 			resp.Body.Close()
 		}()
@@ -180,9 +184,9 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 		}
 
 		// check error type
-		fb.watchMtx.Lock()
+		mtx.Lock()
 		closed := closedManually
-		fb.watchMtx.Unlock()
+		mtx.Unlock()
 		if !closed && scanErr != nil {
 			notifications <- Event{
 				Type: EventTypeError,
