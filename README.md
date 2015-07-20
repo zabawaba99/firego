@@ -114,7 +114,6 @@ for {
 	fmt.Println(event)
 	fmt.Println(ok)
 }
-}
 ```
 
 Check the [GoDocs](http://godoc.org/github.com/CloudCom/firego) or
