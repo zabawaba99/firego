@@ -105,10 +105,10 @@ if err := f.Remove(); err != nil {
 
 ```go
 notifications := make(chan firego.Event)
-if err := fb.Watch(notifications); err != nil {
+if err := f.Watch(notifications); err != nil {
 	log.Fatel(err)
 }
-defer func() { fb.StopWatching() }()
+defer func() { f.StopWatching() }()
 for {
 	event, ok := <-notifications
 	fmt.Println(event)
