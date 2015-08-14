@@ -4,20 +4,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/zabawaba99/firetest"
 )
 
 func TestRemove(t *testing.T) {
 	t.Parallel()
-	var (
-		server = newTestServer("")
-		fb     = New(server.URL)
-	)
+	server := firetest.New()
+	server.Start()
 	defer server.Close()
 
-	fb.Remove()
-	require.Len(t, server.receivedReqs, 1)
+	server.Set("", true)
 
-	req := server.receivedReqs[0]
-	assert.Equal(t, "DELETE", req.Method)
+	fb := New(server.URL)
+	err := fb.Remove()
+	assert.NoError(t, err)
+
+	v := server.Get("")
+	assert.Nil(t, v)
 }

@@ -13,6 +13,20 @@ import (
 
 const URL = "https://somefirebaseapp.firebaseIO.com"
 
+type TestServer struct {
+	*httptest.Server
+	receivedReqs []*http.Request
+}
+
+func newTestServer(response string) *TestServer {
+	ts := &TestServer{}
+	ts.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		ts.receivedReqs = append(ts.receivedReqs, req)
+		fmt.Fprint(w, response)
+	}))
+	return ts
+}
+
 func TestNew(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {

@@ -4,40 +4,37 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/zabawaba99/firetest"
 )
 
 const authToken = "token"
 
 func TestAuth(t *testing.T) {
 	t.Parallel()
-	var (
-		server = newTestServer("")
-		fb     = New(server.URL)
-	)
+	server := firetest.New()
+	server.Start()
 	defer server.Close()
 
-	fb.Auth(authToken)
-	fb.Value("")
-	require.Len(t, server.receivedReqs, 1)
+	server.RequireAuth(true)
+	fb := New(server.URL)
 
-	req := server.receivedReqs[0]
-	assert.Equal(t, "auth="+authToken, req.URL.Query().Encode())
+	fb.Auth(server.Secret)
+	var v interface{}
+	err := fb.Value(&v)
+	assert.NoError(t, err)
 }
 
 func TestUnauth(t *testing.T) {
 	t.Parallel()
-	var (
-		server = newTestServer("")
-		fb     = New(server.URL)
-	)
+	server := firetest.New()
+	server.Start()
 	defer server.Close()
 
-	fb.Auth(authToken)
-	fb.Unauth()
-	fb.Value("")
-	require.Len(t, server.receivedReqs, 1)
+	server.RequireAuth(true)
+	fb := New(server.URL)
 
-	req := server.receivedReqs[0]
-	assert.Equal(t, "", req.URL.Query().Encode())
+	fb.params.Add("auth", server.Secret)
+	fb.Unauth()
+	err := fb.Value("")
+	assert.Error(t, err)
 }

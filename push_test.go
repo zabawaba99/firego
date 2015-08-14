@@ -1,24 +1,27 @@
 package firego
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/zabawaba99/firetest"
 )
 
 func TestPush(t *testing.T) {
 	t.Parallel()
 	var (
-		response = `{"foo":"bar"}`
-		server   = newTestServer(response)
-		fb       = New(server.URL)
+		payload = map[string]interface{}{"foo": "bar"}
+		server  = firetest.New()
 	)
+	server.Start()
 	defer server.Close()
 
-	fb.Push(response)
-	require.Len(t, server.receivedReqs, 1)
+	fb := New(server.URL)
+	childRef, err := fb.Push(payload)
+	assert.NoError(t, err)
 
-	req := server.receivedReqs[0]
-	assert.Equal(t, "POST", req.Method)
+	path := strings.TrimPrefix(childRef.String(), server.URL+"/")
+	v := server.Get(path)
+	assert.Equal(t, payload, v)
 }
