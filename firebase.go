@@ -11,7 +11,6 @@ import (
 	"net/http"
 	_url "net/url"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -40,8 +39,7 @@ type Firebase struct {
 	params _url.Values
 	client *http.Client
 
-	watchMtx     sync.Mutex
-	watching     bool
+	watching     *int32
 	stopWatching chan struct{}
 }
 
@@ -75,6 +73,7 @@ func New(url string) *Firebase {
 		url:          sanitizeURL(url),
 		params:       _url.Values{},
 		client:       &http.Client{Transport: tr},
+		watching:     new(int32),
 		stopWatching: make(chan struct{}),
 	}
 }

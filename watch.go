@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
-	"sync"
+	"sync/atomic"
 )
 
 // EventTypeError is the type that is set on an Event struct if an
@@ -34,16 +34,16 @@ func (fb *Firebase) StopWatching() {
 }
 
 func (fb *Firebase) isWatching() bool {
-	fb.watchMtx.Lock()
-	v := fb.watching
-	fb.watchMtx.Unlock()
-	return v
+	return atomic.LoadInt32(fb.watching) == 1
 }
 
 func (fb *Firebase) setWatching(v bool) {
-	fb.watchMtx.Lock()
-	fb.watching = v
-	fb.watchMtx.Unlock()
+	var watching int32
+	if v {
+		watching = 1
+	}
+
+	atomic.StoreInt32(fb.watching, watching)
 }
 
 // Watch listens for changes on a firebase instance and
@@ -81,19 +81,14 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 		scanner := bufio.NewReader(resp.Body)
 		var (
 			scanErr        error
-			closedManually bool
-			mtx            sync.Mutex
+			closedManually = new(int32)
 		)
 
 		// monitor the stopWatching channel
 		// if we're told to stop, close the response Body
 		go func() {
 			<-fb.stopWatching
-
-			mtx.Lock()
-			closedManually = true
-			mtx.Unlock()
-
+			atomic.StoreInt32(closedManually, 1)
 			resp.Body.Close()
 		}()
 	scanning:
@@ -184,9 +179,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 		}
 
 		// check error type
-		mtx.Lock()
-		closed := closedManually
-		mtx.Unlock()
+		closed := atomic.LoadInt32(closedManually) == 1
 		if !closed && scanErr != nil {
 			notifications <- Event{
 				Type: EventTypeError,
