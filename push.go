@@ -9,6 +9,9 @@ func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 		return nil, err
 	}
 	bytes, err = fb.doRequest("POST", bytes)
+	if err != nil {
+		return nil, err
+	}
 	var m map[string]string
 	if err := json.Unmarshal(bytes, &m); err != nil {
 		return nil, err
