@@ -101,6 +101,21 @@ if err := f.Remove(); err != nil {
 }
 ```
 
+### Watch a Node
+
+```go
+notifications := make(chan firego.Event)
+if err := f.Watch(notifications); err != nil {
+	log.Fatal(err)
+}
+
+defer f.StopWatching()
+for event := range notifications {
+	fmt.Printf("Event %#v\n", event)
+}
+fmt.Printf("Notifications have stopped")
+```
+
 Check the [GoDocs](http://godoc.org/github.com/CloudCom/firego) or
 [Firebase Documentation](https://www.firebase.com/docs/rest/) for more details
 
