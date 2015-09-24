@@ -63,6 +63,16 @@ func TestChild(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s/%s", parent.url, childNode), child.url)
 }
 
+func TestChild_Issue26(t *testing.T) {
+	t.Parallel()
+	parent := New(URL)
+	child1 := parent.Child("one")
+	child2 := child1.Child("two")
+
+	child1.Shallow(true)
+	assert.Len(t, child2.params, 0)
+}
+
 func TestTimeoutDuration_Headers(t *testing.T) {
 	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
 	TimeoutDuration = time.Millisecond
