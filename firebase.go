@@ -64,17 +64,18 @@ func New(url string) *Firebase {
 	tr = &http.Transport{
 		DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
 		Dial: func(network, address string) (net.Conn, error) {
-			start := time.Now()
-			c, err := net.DialTimeout(network, address, TimeoutDuration)
-			tr.ResponseHeaderTimeout = TimeoutDuration - time.Since(start)
-			return c, err
+			return net.DialTimeout(network, address, TimeoutDuration)
 		},
+		ResponseHeaderTimeout: TimeoutDuration,
 	}
 
 	return &Firebase{
 		url:          sanitizeURL(url),
 		params:       _url.Values{},
-		client:       &http.Client{Transport: tr},
+		client:       &http.Client{
+			Transport: tr,
+			Timeout:   TimeoutDuration,
+		},
 		stopWatching: make(chan struct{}),
 	}
 }
