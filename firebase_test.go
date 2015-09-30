@@ -67,10 +67,11 @@ func TestTimeoutDuration_Headers(t *testing.T) {
 	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
 	TimeoutDuration = time.Millisecond
 
+	c := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		time.Sleep(2 * TimeoutDuration)
+		<-c
 	}))
-	defer server.Close()
+	defer close(c)
 
 	fb := New(server.URL)
 	err := fb.Value("")
@@ -78,10 +79,10 @@ func TestTimeoutDuration_Headers(t *testing.T) {
 	assert.IsType(t, ErrTimeout{}, err)
 
 	// ResponseHeaderTimeout should be TimeoutDuration less the time it took to dial, and should be positive
-	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
-	tr := fb.client.Transport.(*http.Transport)
-	assert.True(t, tr.ResponseHeaderTimeout < TimeoutDuration)
-	assert.True(t, tr.ResponseHeaderTimeout > 0)
+	require.IsType(t, (*lockTransport)(nil), fb.client.Transport)
+	tr := fb.client.Transport.(*lockTransport)
+	assert.True(t, tr.responseHeaderTimeout() < TimeoutDuration)
+	assert.True(t, tr.responseHeaderTimeout() > 0)
 }
 
 func TestTimeoutDuration_Dial(t *testing.T) {
@@ -94,8 +95,8 @@ func TestTimeoutDuration_Dial(t *testing.T) {
 	assert.IsType(t, ErrTimeout{}, err)
 
 	// ResponseHeaderTimeout should be negative since the total duration was consumed when dialing
-	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
-	assert.True(t, fb.client.Transport.(*http.Transport).ResponseHeaderTimeout < 0)
+	require.IsType(t, (*lockTransport)(nil), fb.client.Transport)
+	assert.True(t, fb.client.Transport.(*lockTransport).responseHeaderTimeout() < 0)
 }
 
 func TestShallow(t *testing.T) {
@@ -142,4 +143,11 @@ func TestIncludePriority(t *testing.T) {
 
 	req = server.receivedReqs[1]
 	assert.Equal(t, "", req.URL.Query().Encode())
+}
+
+func (l *lockTransport) responseHeaderTimeout() time.Duration {
+	l.m.RLock()
+	d := l.Transport.ResponseHeaderTimeout
+	l.m.RUnlock()
+	return d
 }

@@ -20,6 +20,17 @@ import (
 // an ErrTimeout error
 var TimeoutDuration = 30 * time.Second
 
+type lockTransport struct {
+	*http.Transport
+	m sync.RWMutex
+}
+
+func (l *lockTransport) setTimeout(d time.Duration) {
+	l.m.Lock()
+	l.Transport.ResponseHeaderTimeout = d
+	l.m.Unlock()
+}
+
 // ErrTimeout is an error type is that is returned if a request
 // exceeds the TimeoutDuration configured
 type ErrTimeout struct {
@@ -60,13 +71,13 @@ func sanitizeURL(url string) string {
 // New creates a new Firebase reference
 func New(url string) *Firebase {
 
-	var tr *http.Transport
-	tr = &http.Transport{
+	tr := &lockTransport{}
+	tr.Transport = &http.Transport{
 		DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
 		Dial: func(network, address string) (net.Conn, error) {
 			start := time.Now()
 			c, err := net.DialTimeout(network, address, TimeoutDuration)
-			tr.ResponseHeaderTimeout = TimeoutDuration - time.Since(start)
+			tr.setTimeout(TimeoutDuration - time.Since(start))
 			return c, err
 		},
 	}
