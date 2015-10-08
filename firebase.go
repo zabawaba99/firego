@@ -88,12 +88,19 @@ func (fb *Firebase) String() string {
 // Child creates a new Firebase reference for the requested
 // child with the same configuration as the parent
 func (fb *Firebase) Child(child string) *Firebase {
-	return &Firebase{
+	c := &Firebase{
 		url:          fb.url + "/" + child,
-		params:       fb.params,
+		params:       _url.Values{},
 		client:       fb.client,
 		stopWatching: make(chan struct{}),
 	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	return c
 }
 
 // Shallow limits the depth of the data returned when calling Value.
