@@ -2,6 +2,7 @@ package firego
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +13,10 @@ import (
 )
 
 const URL = "https://somefirebaseapp.firebaseIO.com"
+
+func init() {
+	TimeoutDuration = 10 * time.Millisecond
+}
 
 type TestServer struct {
 	*httptest.Server
@@ -64,9 +69,6 @@ func TestChild(t *testing.T) {
 }
 
 func TestTimeoutDuration_Headers(t *testing.T) {
-	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
-	TimeoutDuration = time.Millisecond
-
 	c := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		<-c
@@ -77,26 +79,19 @@ func TestTimeoutDuration_Headers(t *testing.T) {
 	err := fb.Value("")
 	assert.NotNil(t, err)
 	assert.IsType(t, ErrTimeout{}, err)
-
-	// ResponseHeaderTimeout should be TimeoutDuration
-	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
-	tr := fb.client.Transport.(*http.Transport)
-	assert.Equal(t, TimeoutDuration, tr.ResponseHeaderTimeout)
+	assert.Equal(t, TimeoutDuration, fb.client.Timeout)
 }
 
 func TestTimeoutDuration_Dial(t *testing.T) {
-	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
-	TimeoutDuration = time.Microsecond
-
 	fb := New("http://dialtimeouterr.or/")
+
+	timeoutDialer := (&net.Dialer{Timeout: time.Nanosecond}).Dial
+	fb.client.Transport.(*http.Transport).Dial = timeoutDialer
+
 	err := fb.Value("")
 	assert.NotNil(t, err)
-	assert.IsType(t, ErrTimeout{}, err)
-
-	// ResponseHeaderTimeout should be TimeoutDuration
-	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
-	tr := fb.client.Transport.(*http.Transport)
-	assert.Equal(t, TimeoutDuration, tr.ResponseHeaderTimeout)
+	assert.IsType(t, ErrTimeout{}, err, "%s", err)
+	assert.Equal(t, TimeoutDuration, fb.client.Timeout)
 }
 
 func TestShallow(t *testing.T) {

@@ -59,24 +59,27 @@ func sanitizeURL(url string) string {
 
 // New creates a new Firebase reference
 func New(url string) *Firebase {
-
-	var tr *http.Transport
-	tr = &http.Transport{
-		DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
-		Dial: func(network, address string) (net.Conn, error) {
-			return net.DialTimeout(network, address, TimeoutDuration)
-		},
-		ResponseHeaderTimeout: TimeoutDuration,
-	}
-
 	return &Firebase{
 		url:          sanitizeURL(url),
 		params:       _url.Values{},
-		client:       &http.Client{
-			Transport: tr,
-			Timeout:   TimeoutDuration,
-		},
+		client:       newClient(),
 		stopWatching: make(chan struct{}),
+	}
+}
+
+// newClient returns a *http.Client configured with TimeoutDuration and
+// a http.RoundTripper formed exactly like http.DefaultTransport
+func newClient() *http.Client {
+	return &http.Client{
+		Timeout: TimeoutDuration,
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+		},
 	}
 }
 
@@ -147,21 +150,11 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 
 	case *_url.Error:
 		// `http.Client.Do` will return a `url.Error` that wraps a `net.Error`
-		// when exceeding it's `Transport`'s `ResponseHeadersTimeout`
-		e1, ok := err.Err.(net.Error)
-		if ok && e1.Timeout() {
+		// when exceeding it's `Transport`'s `ResponseHeadersTimeout` or when
+		// `net.Dial` timed out
+		if e1, ok := err.Err.(net.Error); ok && e1.Timeout() {
 			return nil, ErrTimeout{err}
 		}
-
-		return nil, err
-
-	case net.Error:
-		// `http.Client.Do` will return a `net.Error` directly when Dial times
-		// out, or when the Client's RoundTripper otherwise returns an err
-		if err.Timeout() {
-			return nil, ErrTimeout{err}
-		}
-
 		return nil, err
 	}
 
