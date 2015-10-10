@@ -2,6 +2,7 @@ package firego
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +13,10 @@ import (
 )
 
 const URL = "https://somefirebaseapp.firebaseIO.com"
+
+func init() {
+	TimeoutDuration = 10 * time.Millisecond
+}
 
 type TestServer struct {
 	*httptest.Server
@@ -74,38 +79,28 @@ func TestChild_Issue26(t *testing.T) {
 }
 
 func TestTimeoutDuration_Headers(t *testing.T) {
-	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
-	TimeoutDuration = time.Millisecond
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(2 * TimeoutDuration)
 	}))
-	defer server.Close()
 
 	fb := New(server.URL)
+
 	err := fb.Value("")
 	assert.NotNil(t, err)
-	assert.IsType(t, ErrTimeout{}, err)
-
-	// ResponseHeaderTimeout should be TimeoutDuration less the time it took to dial, and should be positive
-	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
-	tr := fb.client.Transport.(*http.Transport)
-	assert.True(t, tr.ResponseHeaderTimeout < TimeoutDuration)
-	assert.True(t, tr.ResponseHeaderTimeout > 0)
+	assert.IsType(t, ErrTimeout{}, err, "%s", err)
+	assert.Equal(t, TimeoutDuration, fb.client.Timeout)
 }
 
 func TestTimeoutDuration_Dial(t *testing.T) {
-	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
-	TimeoutDuration = time.Microsecond
-
 	fb := New("http://dialtimeouterr.or/")
+
+	timeoutDialer := (&net.Dialer{Timeout: time.Nanosecond}).Dial
+	fb.client.Transport.(*http.Transport).Dial = timeoutDialer
+
 	err := fb.Value("")
 	assert.NotNil(t, err)
-	assert.IsType(t, ErrTimeout{}, err)
-
-	// ResponseHeaderTimeout should be negative since the total duration was consumed when dialing
-	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
-	assert.True(t, fb.client.Transport.(*http.Transport).ResponseHeaderTimeout < 0)
+	assert.IsType(t, ErrTimeout{}, err, "%s", err)
+	assert.Equal(t, TimeoutDuration, fb.client.Timeout)
 }
 
 func TestShallow(t *testing.T) {
