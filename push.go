@@ -18,6 +18,6 @@ func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	}
 	return &Firebase{
 		url:    fb.url + "/" + m["name"],
-		client: fb.client,
+		Client: fb.Client,
 	}, err
 }

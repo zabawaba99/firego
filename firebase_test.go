@@ -72,25 +72,26 @@ func TestTimeoutDuration_Headers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(2 * TimeoutDuration)
 	}))
+	defer server.Close()
 
 	fb := New(server.URL)
 
 	err := fb.Value("")
 	assert.NotNil(t, err)
 	assert.IsType(t, ErrTimeout{}, err, "%s", err)
-	assert.Equal(t, TimeoutDuration, fb.client.Timeout)
+	assert.Equal(t, TimeoutDuration, fb.Client.Timeout)
 }
 
 func TestTimeoutDuration_Dial(t *testing.T) {
 	fb := New("http://dialtimeouterr.or/")
 
-	timeoutDialer := (&net.Dialer{Timeout: time.Nanosecond}).Dial
-	fb.client.Transport.(*http.Transport).Dial = timeoutDialer
+	quickDialer := (&net.Dialer{Timeout: time.Nanosecond}).Dial
+	fb.Client.Transport.(*http.Transport).Dial = quickDialer
 
 	err := fb.Value("")
 	assert.NotNil(t, err)
 	assert.IsType(t, ErrTimeout{}, err, "%s", err)
-	assert.Equal(t, TimeoutDuration, fb.client.Timeout)
+	assert.Equal(t, TimeoutDuration, fb.Client.Timeout)
 }
 
 func TestShallow(t *testing.T) {

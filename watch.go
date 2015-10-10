@@ -69,7 +69,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	req.Header.Add("Accept", "text/event-stream")
 
 	// do request
-	resp, err := fb.client.Do(req)
+	resp, err := fb.Client.Do(req)
 	if err != nil {
 		fb.setWatching(false)
 		return err

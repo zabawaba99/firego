@@ -38,7 +38,8 @@ const (
 type Firebase struct {
 	url    string
 	params _url.Values
-	client *http.Client
+
+	Client *http.Client
 
 	watchMtx     sync.Mutex
 	watching     bool
@@ -62,23 +63,25 @@ func New(url string) *Firebase {
 	return &Firebase{
 		url:          sanitizeURL(url),
 		params:       _url.Values{},
-		client:       newClient(),
+		Client:       NewClient(),
 		stopWatching: make(chan struct{}),
 	}
 }
 
-// newClient returns a *http.Client configured with TimeoutDuration and
-// a http.RoundTripper formed exactly like http.DefaultTransport
-func newClient() *http.Client {
+// NewClient returns a *http.Client configured with TimeoutDuration and
+// a http.RoundTripper formed like http.DefaultTransport, but with
+// TimeoutDuration substituted for the Client's Timeout, the Dialer's Timeout
+// and the Transport's TLSHandshakeTimeout
+func NewClient() *http.Client {
 	return &http.Client{
 		Timeout: TimeoutDuration,
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
+				Timeout: TimeoutDuration,
 			}).Dial,
-			TLSHandshakeTimeout: 10 * time.Second,
+			DisableKeepAlives:   true,
+			TLSHandshakeTimeout: TimeoutDuration,
 		},
 	}
 }
@@ -95,7 +98,7 @@ func (fb *Firebase) Child(child string) *Firebase {
 	return &Firebase{
 		url:          fb.url + "/" + child,
 		params:       fb.params,
-		client:       fb.client,
+		Client:       fb.Client,
 		stopWatching: make(chan struct{}),
 	}
 }
@@ -141,7 +144,7 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	resp, err := fb.client.Do(req)
+	resp, err := fb.Client.Do(req)
 	switch err := err.(type) {
 	default:
 		return nil, err
