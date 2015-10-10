@@ -69,16 +69,15 @@ func TestChild(t *testing.T) {
 }
 
 func TestTimeoutDuration_Headers(t *testing.T) {
-	c := make(chan struct{})
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		<-c
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(2 * TimeoutDuration)
 	}))
-	defer close(c)
 
 	fb := New(server.URL)
+
 	err := fb.Value("")
 	assert.NotNil(t, err)
-	assert.IsType(t, ErrTimeout{}, err)
+	assert.IsType(t, ErrTimeout{}, err, "%s", err)
 	assert.Equal(t, TimeoutDuration, fb.client.Timeout)
 }
 

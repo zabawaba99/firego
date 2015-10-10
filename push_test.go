@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/zabawaba99/firetest"
 )
 
@@ -19,7 +20,7 @@ func TestPush(t *testing.T) {
 
 	fb := New(server.URL)
 	childRef, err := fb.Push(payload)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	path := strings.TrimPrefix(childRef.String(), server.URL+"/")
 	v := server.Get(path)
