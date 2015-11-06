@@ -16,7 +16,7 @@ func TestValue(t *testing.T) {
 	server.Start()
 	defer server.Close()
 
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 
 	server.Set("", response)
 

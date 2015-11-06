@@ -21,7 +21,7 @@ func TestWatch(t *testing.T) {
 	server.Start()
 	defer server.Close()
 
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 
 	notifications := make(chan Event)
 	err := fb.Watch(notifications)
@@ -67,7 +67,7 @@ func TestWatchRedirectPreservesHeader(t *testing.T) {
 	}))
 	defer server.Close()
 
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 	notifications := make(chan Event)
 
 	err := fb.Watch(notifications)
@@ -89,7 +89,7 @@ func TestWatchError(t *testing.T) {
 
 	var (
 		notifications = make(chan Event)
-		fb            = New(server.URL)
+		fb            = New(server.URL, nil)
 	)
 	defer server.Close()
 
@@ -113,7 +113,7 @@ func TestStopWatch(t *testing.T) {
 	server.Start()
 	defer server.Close()
 
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 
 	notifications := make(chan Event)
 	go func() {

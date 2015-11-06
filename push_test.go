@@ -17,7 +17,7 @@ func TestPush(t *testing.T) {
 	server.Start()
 	defer server.Close()
 
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 	childRef, err := fb.Push(payload)
 	assert.NoError(t, err)
 

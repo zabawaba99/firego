@@ -2,6 +2,7 @@ package firego
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -47,7 +48,45 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		fb := New(tt.givenURL)
+		fb := New(tt.givenURL, nil)
+		assert.Equal(t, URL, fb.url, "givenURL: %s", tt.givenURL)
+	}
+}
+
+func TestNewWithProvidedHttpClient(t *testing.T) {
+	t.Parallel()
+
+	var tr *http.Transport
+	tr = &http.Transport{
+		DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
+		Dial: func(network, address string) (net.Conn, error) {
+			start := time.Now()
+			c, err := net.DialTimeout(network, address, TimeoutDuration)
+			tr.ResponseHeaderTimeout = TimeoutDuration - time.Since(start)
+			return c, err
+		},
+	}
+	var client = http.Client{Transport: tr};
+
+	testCases := []struct {
+		givenURL string
+	}{
+		{
+			URL,
+		},
+		{
+			URL + "/",
+		},
+		{
+			"somefirebaseapp.firebaseIO.com",
+		},
+		{
+			"somefirebaseapp.firebaseIO.com/",
+		},
+	}
+
+	for _, tt := range testCases {
+		fb := New(tt.givenURL, &client)
 		assert.Equal(t, URL, fb.url, "givenURL: %s", tt.givenURL)
 	}
 }
@@ -55,7 +94,7 @@ func TestNew(t *testing.T) {
 func TestChild(t *testing.T) {
 	t.Parallel()
 	var (
-		parent    = New(URL)
+		parent    = New(URL, nil)
 		childNode = "node"
 		child     = parent.Child(childNode)
 	)
@@ -65,7 +104,7 @@ func TestChild(t *testing.T) {
 
 func TestChild_Issue26(t *testing.T) {
 	t.Parallel()
-	parent := New(URL)
+	parent := New(URL, nil)
 	child1 := parent.Child("one")
 	child2 := child1.Child("two")
 
@@ -82,7 +121,7 @@ func TestTimeoutDuration_Headers(t *testing.T) {
 	}))
 	defer server.Close()
 
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 	err := fb.Value("")
 	assert.NotNil(t, err)
 	assert.IsType(t, ErrTimeout{}, err)
@@ -98,7 +137,7 @@ func TestTimeoutDuration_Dial(t *testing.T) {
 	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
 	TimeoutDuration = time.Microsecond
 
-	fb := New("http://dialtimeouterr.or/")
+	fb := New("http://dialtimeouterr.or/", nil)
 	err := fb.Value("")
 	assert.NotNil(t, err)
 	assert.IsType(t, ErrTimeout{}, err)
@@ -112,7 +151,7 @@ func TestShallow(t *testing.T) {
 	t.Parallel()
 	var (
 		server = newTestServer("")
-		fb     = New(server.URL)
+		fb     = New(server.URL, nil)
 	)
 	defer server.Close()
 
@@ -135,7 +174,7 @@ func TestOrderBy(t *testing.T) {
 	t.Parallel()
 	var (
 		server = newTestServer("")
-		fb     = New(server.URL)
+		fb     = New(server.URL, nil)
 	)
 	defer server.Close()
 
@@ -150,7 +189,7 @@ func TestStartAt(t *testing.T) {
 	t.Parallel()
 	var (
 		server = newTestServer("")
-		fb     = New(server.URL)
+		fb     = New(server.URL, nil)
 	)
 	defer server.Close()
 
@@ -165,7 +204,7 @@ func TestEndAt(t *testing.T) {
 	t.Parallel()
 	var (
 		server = newTestServer("")
-		fb     = New(server.URL)
+		fb     = New(server.URL, nil)
 	)
 	defer server.Close()
 
@@ -180,7 +219,7 @@ func TestIncludePriority(t *testing.T) {
 	t.Parallel()
 	var (
 		server = newTestServer("")
-		fb     = New(server.URL)
+		fb     = New(server.URL, nil)
 	)
 	defer server.Close()
 
