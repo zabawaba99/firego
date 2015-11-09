@@ -6,6 +6,7 @@ package firego
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -19,6 +20,8 @@ import (
 // a connection and receive headers from Firebase before returning
 // an ErrTimeout error
 var TimeoutDuration = 30 * time.Second
+
+var defaultRedirectLimit = 30
 
 // ErrTimeout is an error type is that is returned if a request
 // exceeds the TimeoutDuration configured
@@ -57,6 +60,25 @@ func sanitizeURL(url string) string {
 	return url
 }
 
+// Preserve headers on redirect
+// See: https://github.com/golang/go/issues/4800
+func redirectPreserveHeaders(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		// No redirects
+		return nil
+	}
+
+	if len(via) > defaultRedirectLimit {
+		return fmt.Errorf("%d consecutive requests(redirects)", len(via))
+	}
+
+	// mutate the subsequent redirect requests with the first Header
+	for key, val := range via[0].Header {
+		req.Header[key] = val
+	}
+	return nil
+}
+
 // New creates a new Firebase reference
 func New(url string) *Firebase {
 
@@ -71,10 +93,16 @@ func New(url string) *Firebase {
 		},
 	}
 
+	var client *http.Client
+	client = &http.Client{
+		Transport:     tr,
+		CheckRedirect: redirectPreserveHeaders,
+	}
+
 	return &Firebase{
 		url:          sanitizeURL(url),
 		params:       _url.Values{},
-		client:       &http.Client{Transport: tr},
+		client:       client,
 		stopWatching: make(chan struct{}),
 	}
 }

@@ -50,6 +50,30 @@ func TestWatch(t *testing.T) {
 	}
 }
 
+func TestWatchRedirectPreservesHeader(t *testing.T) {
+	t.Parallel()
+
+	redirectServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		assert.Equal(t, []string{"text/event-stream"}, req.Header["Accept"])
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer redirectServer.Close()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Location", redirectServer.URL)
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	}))
+	defer server.Close()
+
+	fb := New(server.URL)
+	notifications := make(chan Event)
+
+	err := fb.Watch(notifications)
+	assert.NoError(t, err)
+}
+
 func TestWatchError(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
