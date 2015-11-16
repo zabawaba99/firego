@@ -5,9 +5,6 @@
 
 A Firebase client written in Go
 
-##### Under Development
-The API may or may not change radically within the next upcoming weeks.
-
 ## Installation
 
 ```bash
