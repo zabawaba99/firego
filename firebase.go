@@ -232,7 +232,6 @@ func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, erro
 	if len(fb.params) > 0 {
 		path += "?" + fb.params.Encode()
 	}
-	fmt.Printf("Firebase Path: %v ", path)
 	return http.NewRequest(method, path, bytes.NewReader(body))
 }
 
