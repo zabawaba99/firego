@@ -131,6 +131,75 @@ func (fb *Firebase) Child(child string) *Firebase {
 	return c
 }
 
+// StartAt creates a new Firebase reference with the
+// requested StartAt configuration
+func (fb *Firebase) StartAt(value string) *Firebase {
+	c := &Firebase{
+		url:          fb.url,
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	if value != "" {
+		c.params.Set("startAt", value)
+	} else {
+		c.params.Del("startAt")
+	}
+	return c
+}
+
+// EndAt creates a new Firebase reference with the
+// requested EndAt configuration
+func (fb *Firebase) EndAt(value string) *Firebase {
+	c := &Firebase{
+		url:          fb.url,
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	if value != "" {
+		c.params.Set("endAt", value)
+	} else {
+		c.params.Del("endAt")
+	}
+	return c
+}
+
+// OrderBy creates a new Firebase reference with the
+// requested OrderBy configuration
+func (fb *Firebase) OrderBy(value string) *Firebase {
+	c := &Firebase{
+		url:          fb.url,
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	if value != "" {
+		c.params.Set("orderBy", value)
+	} else {
+		c.params.Del("orderBy")
+	}
+	return c
+}
+
 // Shallow limits the depth of the data returned when calling Value.
 // If the data at the location is a JSON primitive (string, number or boolean),
 // its value will be returned. If the data is a JSON object, the values
@@ -163,6 +232,7 @@ func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, erro
 	if len(fb.params) > 0 {
 		path += "?" + fb.params.Encode()
 	}
+	fmt.Printf("Firebase Path: %v ", path)
 	return http.NewRequest(method, path, bytes.NewReader(body))
 }
 
