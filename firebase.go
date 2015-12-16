@@ -34,6 +34,9 @@ const (
 	authParam    = "auth"
 	formatParam  = "format"
 	shallowParam = "shallow"
+	orderByParam = "orderBy"
+	startAtParam = "startAt"
+	endAtParam   = "endAt"
 	formatVal    = "export"
 )
 
@@ -127,6 +130,75 @@ func (fb *Firebase) Child(child string) *Firebase {
 	// map to avoid modifying the map reference.
 	for k, v := range fb.params {
 		c.params[k] = v
+	}
+	return c
+}
+
+// StartAt creates a new Firebase reference with the
+// requested StartAt configuration
+func (fb *Firebase) StartAt(value string) *Firebase {
+	c := &Firebase{
+		url:          fb.url,
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	if value != "" {
+		c.params.Set(startAtParam, value)
+	} else {
+		c.params.Del(startAtParam)
+	}
+	return c
+}
+
+// EndAt creates a new Firebase reference with the
+// requested EndAt configuration
+func (fb *Firebase) EndAt(value string) *Firebase {
+	c := &Firebase{
+		url:          fb.url,
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	if value != "" {
+		c.params.Set(endAtParam, value)
+	} else {
+		c.params.Del(endAtParam)
+	}
+	return c
+}
+
+// OrderBy creates a new Firebase reference with the
+// requested OrderBy configuration
+func (fb *Firebase) OrderBy(value string) *Firebase {
+	c := &Firebase{
+		url:          fb.url,
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	if value != "" {
+		c.params.Set(orderByParam, value)
+	} else {
+		c.params.Del(orderByParam)
 	}
 	return c
 }
