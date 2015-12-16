@@ -34,6 +34,9 @@ const (
 	authParam    = "auth"
 	formatParam  = "format"
 	shallowParam = "shallow"
+	orderByParam = "orderBy"
+	startAtParam = "startAt"
+	endAtParam   = "endAt"
 	formatVal    = "export"
 )
 
@@ -147,9 +150,9 @@ func (fb *Firebase) StartAt(value string) *Firebase {
 		c.params[k] = v
 	}
 	if value != "" {
-		c.params.Set("startAt", value)
+		c.params.Set(startAtParam, value)
 	} else {
-		c.params.Del("startAt")
+		c.params.Del(startAtParam)
 	}
 	return c
 }
@@ -170,9 +173,9 @@ func (fb *Firebase) EndAt(value string) *Firebase {
 		c.params[k] = v
 	}
 	if value != "" {
-		c.params.Set("endAt", value)
+		c.params.Set(endAtParam, value)
 	} else {
-		c.params.Del("endAt")
+		c.params.Del(endAtParam)
 	}
 	return c
 }
@@ -193,9 +196,9 @@ func (fb *Firebase) OrderBy(value string) *Firebase {
 		c.params[k] = v
 	}
 	if value != "" {
-		c.params.Set("orderBy", value)
+		c.params.Set(orderByParam, value)
 	} else {
-		c.params.Del("orderBy")
+		c.params.Del(orderByParam)
 	}
 	return c
 }
