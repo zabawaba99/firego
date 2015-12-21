@@ -8,7 +8,7 @@ A Firebase client written in Go
 ## Installation
 
 ```bash
-go get -u github.com/CloudCom/firego
+go get -u github.com/zabawaba99/firego
 ```
 
 ## Usage
@@ -16,7 +16,7 @@ go get -u github.com/CloudCom/firego
 Import firego
 
 ```go
-import "github.com/CloudCom/firego"
+import "github.com/zabawaba99/firego"
 ```
 
 Create a new firego reference
@@ -42,7 +42,7 @@ f.Auth("some-token-that-was-created-for-me")
 f.Unauth()
 ```
 
-Visit [Fireauth](https://github.com/CloudCom/fireauth) if you'd like to generate your own auth tokens
+Visit [Fireauth](https://github.com/zabawaba99/fireauth) if you'd like to generate your own auth tokens
 
 ### Get Value
 
@@ -113,7 +113,7 @@ for event := range notifications {
 fmt.Printf("Notifications have stopped")
 ```
 
-Check the [GoDocs](http://godoc.org/github.com/CloudCom/firego) or
+Check the [GoDocs](http://godoc.org/github.com/zabawaba99/firego) or
 [Firebase Documentation](https://www.firebase.com/docs/rest/) for more details
 
 ## Running Tests
