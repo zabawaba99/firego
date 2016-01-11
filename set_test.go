@@ -16,7 +16,7 @@ func TestSet(t *testing.T) {
 	server.Start()
 	defer server.Close()
 
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 	err := fb.Set(payload)
 	assert.NoError(t, err)
 

@@ -22,7 +22,13 @@ import "github.com/zabawaba99/firego"
 Create a new firego reference
 
 ```go
-f := firego.New("https://my-firebase-app.firebaseIO.com")
+f := firego.New("https://my-firebase-app.firebaseIO.com", nil)
+```
+
+with existing http client
+
+```go
+f := firego.New("https://my-firebase-app.firebaseIO.com", client)
 ```
 
 ### Request Timeouts

@@ -15,7 +15,7 @@ func TestRemove(t *testing.T) {
 
 	server.Set("", true)
 
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 	err := fb.Remove()
 	assert.NoError(t, err)
 

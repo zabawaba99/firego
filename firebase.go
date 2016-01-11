@@ -82,24 +82,26 @@ func redirectPreserveHeaders(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-// New creates a new Firebase reference
-func New(url string) *Firebase {
+// New creates a new Firebase reference,
+// if client is nil, http.DefaultClient is used
+func New(url string, client *http.Client) *Firebase {
 
-	var tr *http.Transport
-	tr = &http.Transport{
-		DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
-		Dial: func(network, address string) (net.Conn, error) {
-			start := time.Now()
-			c, err := net.DialTimeout(network, address, TimeoutDuration)
-			tr.ResponseHeaderTimeout = TimeoutDuration - time.Since(start)
-			return c, err
-		},
-	}
+	if client == nil {
+		var tr *http.Transport
+		tr = &http.Transport{
+			DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
+			Dial: func(network, address string) (net.Conn, error) {
+				start := time.Now()
+				c, err := net.DialTimeout(network, address, TimeoutDuration)
+				tr.ResponseHeaderTimeout = TimeoutDuration - time.Since(start)
+				return c, err
+			},
+		}
 
-	var client *http.Client
-	client = &http.Client{
-		Transport:     tr,
-		CheckRedirect: redirectPreserveHeaders,
+		client = &http.Client{
+			Transport:     tr,
+			CheckRedirect: redirectPreserveHeaders,
+		}
 	}
 
 	return &Firebase{

@@ -16,7 +16,7 @@ func TestAuth(t *testing.T) {
 	defer server.Close()
 
 	server.RequireAuth(true)
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 
 	fb.Auth(server.Secret)
 	var v interface{}
@@ -31,7 +31,7 @@ func TestUnauth(t *testing.T) {
 	defer server.Close()
 
 	server.RequireAuth(true)
-	fb := New(server.URL)
+	fb := New(server.URL, nil)
 
 	fb.params.Add("auth", server.Secret)
 	fb.Unauth()
