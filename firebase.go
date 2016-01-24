@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	_url "net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -31,13 +32,15 @@ type ErrTimeout struct {
 
 // query parameter constants
 const (
-	authParam    = "auth"
-	formatParam  = "format"
-	shallowParam = "shallow"
-	orderByParam = "orderBy"
-	startAtParam = "startAt"
-	endAtParam   = "endAt"
-	formatVal    = "export"
+	authParam         = "auth"
+	formatParam       = "format"
+	shallowParam      = "shallow"
+	orderByParam      = "orderBy"
+	startAtParam      = "startAt"
+	endAtParam        = "endAt"
+	formatVal         = "export"
+	limitToFirstParam = "limitToFirst"
+	limitToLastParam  = "limitToLast"
 )
 
 // Firebase represents a location in the cloud
@@ -201,6 +204,56 @@ func (fb *Firebase) OrderBy(value string) *Firebase {
 		c.params.Set(orderByParam, value)
 	} else {
 		c.params.Del(orderByParam)
+	}
+	return c
+}
+
+// LimitToFirst creates a new Firebase reference with the
+// requested limitToFirst configuration.
+//
+// Reference https://www.firebase.com/docs/rest/api/#section-param-query
+func (fb *Firebase) LimitToFirst(value int64) *Firebase {
+	c := &Firebase{
+		url:          fb.url,
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	if value > 0 {
+		c.params.Set(limitToFirstParam, strconv.FormatInt(value, 10))
+	} else {
+		c.params.Del(limitToFirstParam)
+	}
+	return c
+}
+
+// LimitToLast creates a new Firebase reference with the
+// requested limitToLast configuration.
+//
+// Reference https://www.firebase.com/docs/rest/api/#section-param-query
+func (fb *Firebase) LimitToLast(value int64) *Firebase {
+	c := &Firebase{
+		url:          fb.url,
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	if value > 0 {
+		c.params.Set(limitToLastParam, strconv.FormatInt(value, 10))
+	} else {
+		c.params.Del(limitToLastParam)
 	}
 	return c
 }

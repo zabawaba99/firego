@@ -66,7 +66,7 @@ func TestNewWithProvidedHttpClient(t *testing.T) {
 			return c, err
 		},
 	}
-	var client = http.Client{Transport: tr};
+	var client = http.Client{Transport: tr}
 
 	testCases := []struct {
 		givenURL string
@@ -183,6 +183,36 @@ func TestOrderBy(t *testing.T) {
 
 	req := server.receivedReqs[0]
 	assert.Equal(t, orderByParam+"=%22user_id%22", req.URL.Query().Encode())
+}
+
+func TestLimitToFirst(t *testing.T) {
+	t.Parallel()
+	var (
+		server = newTestServer("")
+		fb     = New(server.URL, nil)
+	)
+	defer server.Close()
+
+	fb.LimitToFirst(2).Value("")
+	require.Len(t, server.receivedReqs, 1)
+
+	req := server.receivedReqs[0]
+	assert.Equal(t, limitToFirstParam+"=2", req.URL.Query().Encode())
+}
+
+func TestLimitToLast(t *testing.T) {
+	t.Parallel()
+	var (
+		server = newTestServer("")
+		fb     = New(server.URL, nil)
+	)
+	defer server.Close()
+
+	fb.LimitToLast(2).Value("")
+	require.Len(t, server.receivedReqs, 1)
+
+	req := server.receivedReqs[0]
+	assert.Equal(t, limitToLastParam+"=2", req.URL.Query().Encode())
 }
 
 func TestStartAt(t *testing.T) {
