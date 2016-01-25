@@ -27,7 +27,7 @@ install:
 
 script:
   # ensure everything is formatted all pretty like
-  - gofmt -l -s .
+  - if gofmt -l -s . | grep '**.go'; then exit 1; fi
   # vet out possible issues
   - go vet ./...
   # run tests
