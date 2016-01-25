@@ -19,13 +19,13 @@ import (
 
 // TimeoutDuration is the length of time any request will have to establish
 // a connection and receive headers from Firebase before returning
-// an ErrTimeout error
+// an ErrTimeout error.
 var TimeoutDuration = 30 * time.Second
 
 var defaultRedirectLimit = 30
 
 // ErrTimeout is an error type is that is returned if a request
-// exceeds the TimeoutDuration configured
+// exceeds the TimeoutDuration configured.
 type ErrTimeout struct {
 	error
 }
@@ -43,7 +43,7 @@ const (
 	limitToLastParam  = "limitToLast"
 )
 
-// Firebase represents a location in the cloud
+// Firebase represents a location in the cloud.
 type Firebase struct {
 	url    string
 	params _url.Values
@@ -66,8 +66,9 @@ func sanitizeURL(url string) string {
 	return url
 }
 
-// Preserve headers on redirect
-// See: https://github.com/golang/go/issues/4800
+// Preserve headers on redirect.
+//
+// Reference https://github.com/golang/go/issues/4800
 func redirectPreserveHeaders(req *http.Request, via []*http.Request) error {
 	if len(via) == 0 {
 		// No redirects
@@ -86,7 +87,7 @@ func redirectPreserveHeaders(req *http.Request, via []*http.Request) error {
 }
 
 // New creates a new Firebase reference,
-// if client is nil, http.DefaultClient is used
+// if client is nil, http.DefaultClient is used.
 func New(url string, client *http.Client) *Firebase {
 
 	if client == nil {
@@ -116,13 +117,13 @@ func New(url string, client *http.Client) *Firebase {
 }
 
 // String returns the string representation of the
-// Firebase reference
+// Firebase reference.
 func (fb *Firebase) String() string {
 	return fb.url
 }
 
 // Child creates a new Firebase reference for the requested
-// child with the same configuration as the parent
+// child with the same configuration as the parent.
 func (fb *Firebase) Child(child string) *Firebase {
 	c := &Firebase{
 		url:          fb.url + "/" + child,
@@ -140,7 +141,9 @@ func (fb *Firebase) Child(child string) *Firebase {
 }
 
 // StartAt creates a new Firebase reference with the
-// requested StartAt configuration
+// requested StartAt configuration.
+//
+// Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) StartAt(value string) *Firebase {
 	c := &Firebase{
 		url:          fb.url,
@@ -163,7 +166,9 @@ func (fb *Firebase) StartAt(value string) *Firebase {
 }
 
 // EndAt creates a new Firebase reference with the
-// requested EndAt configuration
+// requested EndAt configuration.
+//
+// Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) EndAt(value string) *Firebase {
 	c := &Firebase{
 		url:          fb.url,
@@ -186,7 +191,9 @@ func (fb *Firebase) EndAt(value string) *Firebase {
 }
 
 // OrderBy creates a new Firebase reference with the
-// requested OrderBy configuration
+// requested OrderBy configuration.
+//
+// Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) OrderBy(value string) *Firebase {
 	c := &Firebase{
 		url:          fb.url,
@@ -273,7 +280,7 @@ func (fb *Firebase) Shallow(v bool) {
 }
 
 // IncludePriority determines whether or not to ask Firebase
-// for the values priority. By default, the priority is not returned
+// for the values priority. By default, the priority is not returned.
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-param-format
 func (fb *Firebase) IncludePriority(v bool) {

@@ -2,7 +2,7 @@ package firego
 
 import "encoding/json"
 
-// Update the specific child with the given value
+// Update the specific child with the given value.
 func (fb *Firebase) Update(v interface{}) error {
 	bytes, err := json.Marshal(v)
 	if err != nil {

@@ -60,6 +60,19 @@ if err := f.Value(&v); err != nil {
 fmt.Printf("%s\n", v)
 ```
 
+#### Querying
+
+Take a look at Firebase's [query parameters](https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering)
+for more information on what each function does.
+
+```go
+var v map[string]interface{}
+if err := f.StartAt("a").EndAt("c").LimitToFirst(8).OrderBy("field").Value(&v); err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("%s\n", v)
+```
+
 ### Set Value
 
 ```go

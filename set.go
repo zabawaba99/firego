@@ -2,7 +2,7 @@ package firego
 
 import "encoding/json"
 
-// Set the value of the Firebase reference
+// Set the value of the Firebase reference.
 func (fb *Firebase) Set(v interface{}) error {
 	bytes, err := json.Marshal(v)
 	if err != nil {

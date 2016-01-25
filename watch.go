@@ -9,11 +9,11 @@ import (
 )
 
 // EventTypeError is the type that is set on an Event struct if an
-// error occurs while watching a Firebase reference
+// error occurs while watching a Firebase reference.
 const EventTypeError = "event_error"
 
 // Event represents a notification received when watching a
-// firebase reference
+// firebase reference.
 type Event struct {
 	// Type of event that was received
 	Type string
@@ -23,7 +23,7 @@ type Event struct {
 	Data interface{}
 }
 
-// StopWatching stops tears down all connections that are watching
+// StopWatching stops tears down all connections that are watching.
 func (fb *Firebase) StopWatching() {
 	if fb.isWatching() {
 		// signal connection to terminal
@@ -51,7 +51,7 @@ func (fb *Firebase) setWatching(v bool) {
 //
 // Only one connection can be established at a time. The
 // second call to this function without a call to fb.StopWatching
-// will close the channel given and return nil immediately
+// will close the channel given and return nil immediately.
 func (fb *Firebase) Watch(notifications chan Event) error {
 	if fb.isWatching() {
 		close(notifications)
