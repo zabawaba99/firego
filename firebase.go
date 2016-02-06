@@ -125,18 +125,8 @@ func (fb *Firebase) String() string {
 // Child creates a new Firebase reference for the requested
 // child with the same configuration as the parent.
 func (fb *Firebase) Child(child string) *Firebase {
-	c := &Firebase{
-		url:          fb.url + "/" + child,
-		params:       _url.Values{},
-		client:       fb.client,
-		stopWatching: make(chan struct{}),
-	}
-
-	// making sure to manually copy the map items into a new
-	// map to avoid modifying the map reference.
-	for k, v := range fb.params {
-		c.params[k] = v
-	}
+	c := fb.copy()
+	c.url = c.url + "/" + child
 	return c
 }
 
@@ -145,18 +135,7 @@ func (fb *Firebase) Child(child string) *Firebase {
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) StartAt(value string) *Firebase {
-	c := &Firebase{
-		url:          fb.url,
-		params:       _url.Values{},
-		client:       fb.client,
-		stopWatching: make(chan struct{}),
-	}
-
-	// making sure to manually copy the map items into a new
-	// map to avoid modifying the map reference.
-	for k, v := range fb.params {
-		c.params[k] = v
-	}
+	c := fb.copy()
 	if value != "" {
 		c.params.Set(startAtParam, value)
 	} else {
@@ -170,18 +149,7 @@ func (fb *Firebase) StartAt(value string) *Firebase {
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) EndAt(value string) *Firebase {
-	c := &Firebase{
-		url:          fb.url,
-		params:       _url.Values{},
-		client:       fb.client,
-		stopWatching: make(chan struct{}),
-	}
-
-	// making sure to manually copy the map items into a new
-	// map to avoid modifying the map reference.
-	for k, v := range fb.params {
-		c.params[k] = v
-	}
+	c := fb.copy()
 	if value != "" {
 		c.params.Set(endAtParam, value)
 	} else {
@@ -195,18 +163,7 @@ func (fb *Firebase) EndAt(value string) *Firebase {
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) OrderBy(value string) *Firebase {
-	c := &Firebase{
-		url:          fb.url,
-		params:       _url.Values{},
-		client:       fb.client,
-		stopWatching: make(chan struct{}),
-	}
-
-	// making sure to manually copy the map items into a new
-	// map to avoid modifying the map reference.
-	for k, v := range fb.params {
-		c.params[k] = v
-	}
+	c := fb.copy()
 	if value != "" {
 		c.params.Set(orderByParam, value)
 	} else {
@@ -220,18 +177,7 @@ func (fb *Firebase) OrderBy(value string) *Firebase {
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-param-query
 func (fb *Firebase) LimitToFirst(value int64) *Firebase {
-	c := &Firebase{
-		url:          fb.url,
-		params:       _url.Values{},
-		client:       fb.client,
-		stopWatching: make(chan struct{}),
-	}
-
-	// making sure to manually copy the map items into a new
-	// map to avoid modifying the map reference.
-	for k, v := range fb.params {
-		c.params[k] = v
-	}
+	c := fb.copy()
 	if value > 0 {
 		c.params.Set(limitToFirstParam, strconv.FormatInt(value, 10))
 	} else {
@@ -245,18 +191,7 @@ func (fb *Firebase) LimitToFirst(value int64) *Firebase {
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-param-query
 func (fb *Firebase) LimitToLast(value int64) *Firebase {
-	c := &Firebase{
-		url:          fb.url,
-		params:       _url.Values{},
-		client:       fb.client,
-		stopWatching: make(chan struct{}),
-	}
-
-	// making sure to manually copy the map items into a new
-	// map to avoid modifying the map reference.
-	for k, v := range fb.params {
-		c.params[k] = v
-	}
+	c := fb.copy()
 	if value > 0 {
 		c.params.Set(limitToLastParam, strconv.FormatInt(value, 10))
 	} else {
@@ -289,6 +224,22 @@ func (fb *Firebase) IncludePriority(v bool) {
 	} else {
 		fb.params.Del(formatParam)
 	}
+}
+
+func (fb *Firebase) copy() *Firebase {
+	c := &Firebase{
+		url:          fb.url,
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+	}
+
+	// making sure to manually copy the map items into a new
+	// map to avoid modifying the map reference.
+	for k, v := range fb.params {
+		c.params[k] = v
+	}
+	return c
 }
 
 func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, error) {
