@@ -116,10 +116,8 @@ func TestStopWatch(t *testing.T) {
 	fb := New(server.URL, nil)
 
 	notifications := make(chan Event)
-	go func() {
-		err := fb.Watch(notifications)
-		assert.NoError(t, err)
-	}()
+	err := fb.Watch(notifications)
+	assert.NoError(t, err)
 
 	<-notifications // get initial notification
 	fb.StopWatching()
