@@ -32,7 +32,7 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 			// we've got children so send an event per child
 			orderedChildren := make([]string, len(children))
 			var i int
-			for k, _ := range children {
+			for k := range children {
 				orderedChildren[i] = k
 				i++
 			}
