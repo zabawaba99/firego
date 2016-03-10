@@ -1,10 +1,9 @@
 package firego
 
 import (
+	"fmt"
 	"sort"
 	"strings"
-
-	"fmt"
 )
 
 type DataSnapshot interface{}
@@ -44,6 +43,8 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 				fn(DataSnapshot(v), pk)
 				pk = k
 			}
+		} else {
+			children = map[string]interface{}{}
 		}
 
 		for event := range notifications {
@@ -80,5 +81,6 @@ func (fb *Firebase) RemoveEventFunc(fn ChildEventFunc) {
 		return
 	}
 
+	delete(fb.eventFuncs, key)
 	close(stop)
 }
