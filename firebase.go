@@ -49,6 +49,7 @@ type Firebase struct {
 	params _url.Values
 	client *http.Client
 
+	eventMtx   sync.Mutex
 	eventFuncs map[string]chan struct{}
 
 	watchMtx     sync.Mutex
