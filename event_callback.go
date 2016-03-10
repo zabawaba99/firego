@@ -6,12 +6,27 @@ import (
 	"strings"
 )
 
+// DataSnapshot instances contains data from a Firebase reference.
 type DataSnapshot interface{}
+
+// ChildEventFunc is the type of function that is called for every
+// new child added under a firebase reference. The snapshot argument
+// contains the data that was added. The previousChildKey argument
+// contains the key of the previous child that this function was called for.
 type ChildEventFunc func(snapshot DataSnapshot, previousChildKey string)
 
+// ChildAdded listens on the firebase instance and executes the callback
+// for every child that is added.
 func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
+	fb.eventMtx.Lock()
+	defer fb.eventMtx.Unlock()
+
 	stop := make(chan struct{})
 	key := fmt.Sprintf("%v", fn)
+	if _, ok := fb.eventFuncs[key]; ok {
+		return nil
+	}
+
 	fb.eventFuncs[key] = stop
 
 	notifications, err := fb.watch(stop)
@@ -74,7 +89,12 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 	return nil
 }
 
+// RemoveEventFunc removes the given function from the firebase
+// reference.
 func (fb *Firebase) RemoveEventFunc(fn ChildEventFunc) {
+	fb.eventMtx.Lock()
+	defer fb.eventMtx.Unlock()
+
 	key := fmt.Sprintf("%v", fn)
 	stop, ok := fb.eventFuncs[key]
 	if !ok {
