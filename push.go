@@ -17,7 +17,7 @@ func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 		return nil, err
 	}
 	return &Firebase{
-		url:    fb.url + "/" + m["name"],
+		path:   fb.path + "/" + m["name"],
 		client: fb.client,
 	}, err
 }

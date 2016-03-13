@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/zabawaba99/firego/repo"
 )
 
 // TimeoutDuration is the length of time any request will have to establish
@@ -44,7 +46,8 @@ const (
 
 // Firebase represents a location in the cloud.
 type Firebase struct {
-	url    string
+	repo   *repo.Repo
+	path   string
 	params _url.Values
 	client *http.Client
 
@@ -110,32 +113,42 @@ func New(url string, client *http.Client) *Firebase {
 		}
 	}
 
-	return &Firebase{
-		url:          sanitizeURL(url),
+	u, err := _url.Parse(sanitizeURL(url))
+	if err != nil {
+		panic("invalid firebase url " + url)
+	}
+
+	r := repo.New(u)
+	fb := &Firebase{
+		repo:         r,
+		path:         u.Path,
 		params:       _url.Values{},
 		client:       client,
 		stopWatching: make(chan struct{}),
 		eventFuncs:   map[string]chan struct{}{},
 	}
+
+	return fb
 }
 
 // String returns the string representation of the
 // Firebase reference.
 func (fb *Firebase) String() string {
-	return fb.url
+	return fb.repo.Host() + "/" + fb.path
 }
 
 // Child creates a new Firebase reference for the requested
 // child with the same configuration as the parent.
 func (fb *Firebase) Child(child string) *Firebase {
 	c := fb.copy()
-	c.url = c.url + "/" + child
+	c.path = c.path + "/" + child
 	return c
 }
 
 func (fb *Firebase) copy() *Firebase {
 	c := &Firebase{
-		url:          fb.url,
+		repo:         fb.repo,
+		path:         fb.path,
 		params:       _url.Values{},
 		client:       fb.client,
 		stopWatching: make(chan struct{}),
@@ -151,7 +164,7 @@ func (fb *Firebase) copy() *Firebase {
 }
 
 func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, error) {
-	path := fb.url + "/.json"
+	path := fb.repo.Host() + "/" + fb.path + "/.json"
 
 	if len(fb.params) > 0 {
 		path += "?" + fb.params.Encode()

@@ -11,3 +11,7 @@ func (fb *Firebase) Set(v interface{}) error {
 	_, err = fb.doRequest("PUT", bytes)
 	return err
 }
+
+func (fb *Firebase) SetValue(v interface{}) {
+	fb.repo.SetValue(fb.path, v)
+}
