@@ -11,6 +11,7 @@ type action string
 const (
 	actionStatus action = "s"
 	actionPut           = "p"
+	actionMerge         = "m"
 )
 
 type wsCallback interface {
@@ -81,11 +82,16 @@ func (c *conn) sendPendingWrites() {
 }
 
 func (c *conn) put(path string, data interface{}) {
-	put := map[string]interface{}{
-		"p": path,
-		"d": data,
-	}
-	id := c.writes.add(actionPut, put)
+	c.createWrite(actionPut, path, data)
+}
+
+func (c *conn) merge(path string, data map[string]interface{}) {
+	c.createWrite(actionMerge, path, data)
+}
+
+func (c *conn) createWrite(a action, p string, d interface{}) {
+	put := writeData{Path: p, Data: d}
+	id := c.writes.add(a, put)
 
 	if c.ws.getState() == connected {
 		c.sendWrite(id)
@@ -102,6 +108,12 @@ func (c *conn) sendWrite(id float64) {
 		iLogField("Successfully wrote op", "w", w)
 		c.writes.delete(id)
 	})
+}
+
+type statusMsg struct {
+	Control struct {
+		Version int `json:"sdk.java.2-5-2"`
+	} `json:"c"`
 }
 
 func (c *conn) sendStatus() {

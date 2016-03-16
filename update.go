@@ -11,3 +11,7 @@ func (fb *Firebase) Update(v interface{}) error {
 	_, err = fb.doRequest("PATCH", bytes)
 	return err
 }
+
+func (fb *Firebase) UpdateChildren(children map[string]interface{}) {
+	fb.repo.UpdateChildren(fb.path, children)
+}

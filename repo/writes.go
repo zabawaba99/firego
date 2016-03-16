@@ -2,9 +2,14 @@ package repo
 
 import "sync"
 
+type writeData struct {
+	Path string      `json:"p"`
+	Data interface{} `json:"d"`
+}
+
 type write struct {
 	action action
-	data   interface{}
+	data   writeData
 }
 
 type pendingWrites struct {
@@ -19,7 +24,7 @@ func newPendingWrites() *pendingWrites {
 	}
 }
 
-func (pw *pendingWrites) add(a action, d interface{}) float64 {
+func (pw *pendingWrites) add(a action, d writeData) float64 {
 	w := write{
 		action: a,
 		data:   d,

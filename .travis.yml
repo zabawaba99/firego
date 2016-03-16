@@ -22,6 +22,7 @@ before_install:
   - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
 
 install:
+  - go get ./...
   # make sure stuff actually builds
   - go build
 

@@ -52,6 +52,23 @@ func (r *Repo) URL() *url.URL {
 }
 
 func (r *Repo) SetValue(p string, v interface{}) {
-	// validate that the value meets restrictions
+	// TODO validate that the value meets restrictions
+
+	// TODO set value into local tree
+
+	// TODO broadcast notification for listeners
+
+	// write values to firebase
 	r.conn.put(p, v)
+}
+
+func (r *Repo) UpdateChildren(p string, children map[string]interface{}) {
+	// TODO validate that the value meets restrictions
+
+	// TODO set value into local tree
+
+	// TODO broadcast notification for listeners
+
+	// write values to firebase
+	r.conn.merge(p, children)
 }
