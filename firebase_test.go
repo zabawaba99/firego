@@ -2,6 +2,7 @@ package firego
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,6 +22,10 @@ type TestServer struct {
 func newTestServer(response string) *TestServer {
 	ts := &TestServer{}
 	ts.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Header.Get("Upgrade") == "websocket" {
+			log.Printf("ignoring requests that are not http\n")
+			return
+		}
 		ts.receivedReqs = append(ts.receivedReqs, req)
 		fmt.Fprint(w, response)
 	}))
@@ -38,7 +43,7 @@ func TestNew(t *testing.T) {
 
 	for _, url := range testURLs {
 		fb := New(url, nil)
-		assert.Equal(t, URL, fb.url, "givenURL: %s", url)
+		assert.Equal(t, URL, fb.repo.Host(), "givenURL: %s", url)
 	}
 }
 
@@ -55,7 +60,7 @@ func TestNewWithProvidedHttpClient(t *testing.T) {
 
 	for _, url := range testURLs {
 		fb := New(url, client)
-		assert.Equal(t, URL, fb.url, "givenURL: %s", url)
+		assert.Equal(t, URL, fb.repo.Host(), "givenURL: %s", url)
 		assert.Equal(t, client, fb.client)
 	}
 }
@@ -68,7 +73,7 @@ func TestChild(t *testing.T) {
 		child     = parent.Child(childNode)
 	)
 
-	assert.Equal(t, fmt.Sprintf("%s/%s", parent.url, childNode), child.url)
+	assert.Equal(t, "/"+childNode, child.path)
 }
 
 func TestChild_Issue26(t *testing.T) {

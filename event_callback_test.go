@@ -42,6 +42,7 @@ func TestChildAdded(t *testing.T) {
 
 	fbChild, err := fb.Push("gaga oh la la")
 	require.NoError(t, err)
+	require.NotNil(t, fbChild)
 
 	// should not get updates
 	err = fb.Child("foo").Set(false)

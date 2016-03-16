@@ -34,7 +34,11 @@ func (r *Repo) connect() {
 }
 
 func (r Repo) Host() string {
-	return r.host
+	scheme := "http"
+	if r.secure {
+		scheme += "s"
+	}
+	return scheme + "://" + r.host
 }
 
 func (r *Repo) URL() *url.URL {
