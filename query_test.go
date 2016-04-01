@@ -38,7 +38,7 @@ func TestOrderBy(t *testing.T) {
 	)
 	defer server.Close()
 
-	fb.OrderBy("\"user_id\"").Value("")
+	fb.OrderBy("user_id").Value("")
 	require.Len(t, server.receivedReqs, 1)
 
 	req := server.receivedReqs[0]
