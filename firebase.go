@@ -118,7 +118,12 @@ func New(url string, client *http.Client) *Firebase {
 // String returns the string representation of the
 // Firebase reference.
 func (fb *Firebase) String() string {
-	return fb.url
+	path := fb.url + "/.json"
+
+	if len(fb.params) > 0 {
+		path += "?" + fb.params.Encode()
+	}
+	return path
 }
 
 // Child creates a new Firebase reference for the requested
@@ -146,11 +151,7 @@ func (fb *Firebase) copy() *Firebase {
 }
 
 func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, error) {
-	path := fb.url + "/.json"
-
-	if len(fb.params) > 0 {
-		path += "?" + fb.params.Encode()
-	}
+	path := fb.String()
 	return http.NewRequest(method, path, bytes.NewReader(body))
 }
 
