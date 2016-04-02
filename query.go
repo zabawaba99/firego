@@ -1,6 +1,9 @@
 package firego
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 // StartAt creates a new Firebase reference with the
 // requested StartAt configuration.
