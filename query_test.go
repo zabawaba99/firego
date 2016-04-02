@@ -127,3 +127,18 @@ func TestIncludePriority(t *testing.T) {
 	req = server.receivedReqs[1]
 	assert.Equal(t, "", req.URL.Query().Encode())
 }
+
+func TestQueryMultipleParams(t *testing.T) {
+	t.Parallel()
+	var (
+		server = newTestServer("")
+		fb     = New(server.URL, nil)
+	)
+	defer server.Close()
+
+	fb.OrderBy("user_id").StartAt("7").Value("")
+	require.Len(t, server.receivedReqs, 1)
+
+	req := server.receivedReqs[0]
+	assert.Equal(t, orderByParam+"=%22user_id%22&startAt=7", req.URL.Query().Encode())
+}

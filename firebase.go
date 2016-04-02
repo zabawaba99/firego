@@ -151,8 +151,7 @@ func (fb *Firebase) copy() *Firebase {
 }
 
 func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, error) {
-	path := fb.String()
-	return http.NewRequest(method, path, bytes.NewReader(body))
+	return http.NewRequest(method, fb.String(), bytes.NewReader(body))
 }
 
 func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
