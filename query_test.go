@@ -84,10 +84,14 @@ func TestStartAt(t *testing.T) {
 	defer server.Close()
 
 	fb.StartAt("3").Value("")
-	require.Len(t, server.receivedReqs, 1)
+	fb.StartAt("foo").Value("")
+	require.Len(t, server.receivedReqs, 2)
 
 	req := server.receivedReqs[0]
 	assert.Equal(t, startAtParam+"=3", req.URL.Query().Encode())
+
+	req = server.receivedReqs[1]
+	assert.Equal(t, startAtParam+"=%22foo%22", req.URL.Query().Encode())
 }
 
 func TestEndAt(t *testing.T) {
@@ -98,11 +102,15 @@ func TestEndAt(t *testing.T) {
 	)
 	defer server.Close()
 
+	fb.EndAt("4").Value("")
 	fb.EndAt("theend").Value("")
-	require.Len(t, server.receivedReqs, 1)
+	require.Len(t, server.receivedReqs, 2)
 
 	req := server.receivedReqs[0]
-	assert.Equal(t, endAtParam+"=theend", req.URL.Query().Encode())
+	assert.Equal(t, endAtParam+"=4", req.URL.Query().Encode())
+
+	req = server.receivedReqs[1]
+	assert.Equal(t, endAtParam+"=%22theend%22", req.URL.Query().Encode())
 }
 
 func TestIncludePriority(t *testing.T) {

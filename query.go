@@ -1,18 +1,23 @@
 package firego
 
 import (
-	"fmt"
 	"strconv"
+	"strings"
 )
 
 // StartAt creates a new Firebase reference with the
-// requested StartAt configuration.
+// requested StartAt configuration. The value that is passed in
+// is automatically escape if it is a string value.
+//
+//    StartAt(7)        // -> endAt=7
+//    StartAt("foo")    // -> endAt="foo"
+//    StartAt(`"foo"`)  // -> endAt="foo"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) StartAt(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
-		c.params.Set(startAtParam, value)
+		c.params.Set(startAtParam, escapeString(value))
 	} else {
 		c.params.Del(startAtParam)
 	}
@@ -20,13 +25,18 @@ func (fb *Firebase) StartAt(value string) *Firebase {
 }
 
 // EndAt creates a new Firebase reference with the
-// requested EndAt configuration.
+// requested EndAt configuration. The value that is passed in
+// is automatically escape if it is a string value.
+//
+//    EndAt(7)        // -> endAt=7
+//    EndAt("foo")    // -> endAt="foo"
+//    EndAt(`"foo"`)  // -> endAt="foo"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) EndAt(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
-		c.params.Set(endAtParam, value)
+		c.params.Set(endAtParam, escapeString(value))
 	} else {
 		c.params.Del(endAtParam)
 	}
@@ -34,17 +44,30 @@ func (fb *Firebase) EndAt(value string) *Firebase {
 }
 
 // OrderBy creates a new Firebase reference with the
-// requested OrderBy configuration.
+// requested OrderBy configuration. The value that is passed in
+// is automatically escape if it is a string value.
+//
+//    OrderBy(7)       // -> endAt=7
+//    OrderBy("foo")   // -> endAt="foo"
+//    OrderBy(`"foo"`) // -> endAt="foo"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) OrderBy(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
-		c.params.Set(orderByParam, fmt.Sprintf("%q", value))
+		c.params.Set(orderByParam, escapeString(value))
 	} else {
 		c.params.Del(orderByParam)
 	}
 	return c
+}
+
+func escapeString(s string) string {
+	_, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return `"` + strings.Trim(s, `"`) + `"`
+	}
+	return s
 }
 
 // LimitToFirst creates a new Firebase reference with the
