@@ -3,12 +3,12 @@ package firego
 import "strings"
 
 type database struct {
-	rootNode *DataSnapshot
+	root *DataSnapshot
 }
 
 func newDatabase() *database {
 	return &database{
-		rootNode: &DataSnapshot{
+		root: &DataSnapshot{
 			children: map[string]*DataSnapshot{},
 		},
 	}
@@ -16,12 +16,12 @@ func newDatabase() *database {
 
 func (d *database) add(path string, n *DataSnapshot) {
 	if path == "" {
-		d.rootNode = n
+		d.root = n
 		return
 	}
 
 	rabbitHole := strings.Split(path, "/")
-	current := d.rootNode
+	current := d.root
 	for i := 0; i < len(rabbitHole)-1; i++ {
 		step := rabbitHole[i]
 		next, ok := current.children[step]
@@ -42,7 +42,7 @@ func (d *database) add(path string, n *DataSnapshot) {
 }
 
 func (d *database) update(path string, n *DataSnapshot) {
-	current := d.rootNode
+	current := d.root
 	rabbitHole := strings.Split(path, "/")
 
 	for i := 0; i < len(rabbitHole); i++ {
@@ -65,14 +65,14 @@ func (d *database) update(path string, n *DataSnapshot) {
 
 func (d *database) del(path string) {
 	if path == "" {
-		d.rootNode = &DataSnapshot{
+		d.root = &DataSnapshot{
 			children: map[string]*DataSnapshot{},
 		}
 		return
 	}
 
 	rabbitHole := strings.Split(path, "/")
-	current := d.rootNode
+	current := d.root
 
 	// traverse to target node's parent
 	var delIdx int
@@ -101,7 +101,7 @@ func (d *database) del(path string) {
 }
 
 func (d *database) get(path string) *DataSnapshot {
-	current := d.rootNode
+	current := d.root
 	if path == "" {
 		return current
 	}

@@ -1,43 +1,56 @@
 package firego
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // DataSnapshot instances contains data from a Firebase reference.
 type DataSnapshot struct {
+	key       string
 	value     interface{}
 	children  map[string]*DataSnapshot
 	parent    *DataSnapshot
 	sliceKids bool
 }
 
-func newSnapshot(data interface{}) *DataSnapshot {
-	d := &DataSnapshot{children: map[string]*DataSnapshot{}}
+func newSnapshot(key string, data interface{}) *DataSnapshot {
+	d := &DataSnapshot{
+		key:      key,
+		children: map[string]*DataSnapshot{},
+	}
 
 	switch data := data.(type) {
 	case map[string]interface{}:
 		for k, v := range data {
-			child := newSnapshot(v)
+			child := newSnapshot(k, v)
 			child.parent = d
 			d.children[k] = child
 		}
 	case []interface{}:
 		d.sliceKids = true
 		for i, v := range data {
-			child := newSnapshot(v)
+			child := newSnapshot(strconv.FormatInt(int64(i), 10), v)
 			child.parent = d
-			d.children[fmt.Sprint(i)] = child
+			d.children[child.key] = child
 		}
 	case string, int, int8, int16, int32, int64, float32, float64, bool:
 		d.value = data
 	case nil:
 		// do nothing
 	default:
-		panic(fmt.Sprintf("Type(%T) not supported\n", data))
+		fmt.Printf("Type(%T) not supported\nIf you see this log please report an issue on https://github.com/zabawaba99/firego", data)
 	}
 
 	return d
 }
 
+// Key retrieves the key for the source location of this snapshot
+func (d *DataSnapshot) Key() string {
+	return d.key
+}
+
+// Value retrieves the data contained in this snapshot.
 func (d *DataSnapshot) Value() interface{} {
 	return d.value
 }
