@@ -6,14 +6,11 @@ import (
 	"strings"
 )
 
-// DataSnapshot instances contains data from a Firebase reference.
-type DataSnapshot interface{}
-
 // ChildEventFunc is the type of function that is called for every
 // new child added under a firebase reference. The snapshot argument
 // contains the data that was added. The previousChildKey argument
 // contains the key of the previous child that this function was called for.
-type ChildEventFunc func(snapshot DataSnapshot, previousChildKey string)
+type ChildEventFunc func(snapshot *DataSnapshot, previousChildKey string)
 
 // ChildAdded listens on the firebase instance and executes the callback
 // for every child that is added.
@@ -40,7 +37,8 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 			return
 		}
 
-		pk := ""
+		var pk string
+		db := newDatabase()
 		children, ok := first.Data.(map[string]interface{})
 		if ok {
 			// we've got children so send an event per child
@@ -55,11 +53,11 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 
 			for _, k := range orderedChildren {
 				v := children[k]
-				fn(DataSnapshot(v), pk)
+				snapshot := newSnapshot(v)
+				db.add(k, snapshot)
+				fn(snapshot, pk)
 				pk = k
 			}
-		} else {
-			children = map[string]interface{}{}
 		}
 
 		for event := range notifications {
@@ -70,19 +68,93 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 			child := strings.Split(event.Path[1:], "/")[0]
 			if event.Data == nil {
 				// delete
-				delete(children, child)
+				db.del(child)
 				continue
 			}
 
-			_, ok := children[child]
-			if ok {
+			if _, ok := db.rootNode.Child(child); ok {
 				// if the child isn't being added, forget it
 				continue
 			}
 
-			fn(DataSnapshot(event.Data), pk)
+			snapshot := newSnapshot(event.Data)
+			db.add(sanitizePath(child), snapshot)
+
+			fn(snapshot, pk)
 			pk = child
-			children[child] = true
+		}
+	}()
+
+	return nil
+}
+
+func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
+	fb.eventMtx.Lock()
+	defer fb.eventMtx.Unlock()
+
+	stop := make(chan struct{})
+	key := fmt.Sprintf("%v", fn)
+	if _, ok := fb.eventFuncs[key]; ok {
+		return nil
+	}
+
+	fb.eventFuncs[key] = stop
+
+	notifications, err := fb.watch(stop)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		first, ok := <-notifications
+		if !ok {
+			return
+		}
+
+		db := newDatabase()
+		db.add("", newSnapshot(first.Data))
+
+		for event := range notifications {
+			path := sanitizePath(event.Path)
+			snapshot := newSnapshot(event.Data)
+
+			if event.Type == "patch" {
+				db.update(path, snapshot)
+				continue
+			}
+
+			if event.Data != nil {
+				db.add(path, snapshot)
+				continue
+			}
+
+			// if node is not root, notify for child and move along
+			if path != "" {
+				snapshot = db.get(path)
+				fn(snapshot, "")
+				db.del(path)
+
+				continue
+			}
+
+			// if node that is being listened to is deleted,
+			// an event should be triggered for every child
+			orderedChildren := make([]string, len(db.rootNode.children))
+			var i int
+			for k := range db.rootNode.children {
+				orderedChildren[i] = k
+				i++
+			}
+
+			sort.Strings(orderedChildren)
+
+			for _, k := range orderedChildren {
+				fn(db.get(k), "")
+				db.del(k)
+			}
+
+			db.del(path)
+
 		}
 	}()
 

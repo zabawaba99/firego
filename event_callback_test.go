@@ -11,7 +11,7 @@ import (
 )
 
 type testEvents struct {
-	snapshot    DataSnapshot
+	snapshot    *DataSnapshot
 	previousKey string
 }
 
@@ -27,7 +27,7 @@ func TestChildAdded(t *testing.T) {
 	server.Set("AAA", "foo")
 
 	var results []testEvents
-	fn := func(snapshot DataSnapshot, previousChildKey string) {
+	fn := func(snapshot *DataSnapshot, previousChildKey string) {
 		results = append(results, testEvents{snapshot, previousChildKey})
 	}
 	err := fb.ChildAdded(fn)
@@ -63,17 +63,84 @@ func TestChildAdded(t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	expected := []testEvents{
-		{"foo", ""},
-		{true, "AAA"},
-		{float64(2), "something"},
-		{map[string]interface{}{"hi": "mom"}, "foo"},
-		{"gaga oh la la", "bar"},
-		{"something-else", strings.TrimPrefix(fbChild.String(), fb.String()+"/")},
+		{newSnapshot("foo"), ""},
+		{newSnapshot(true), "AAA"},
+		{newSnapshot(float64(2)), "something"},
+		{newSnapshot(map[string]interface{}{"hi": "mom"}), "foo"},
+		{newSnapshot("gaga oh la la"), "bar"},
+		{newSnapshot("something-else"), strings.TrimPrefix(fbChild.String(), fb.String()+"/")},
 	}
 
 	assert.Len(t, results, len(expected))
 	for i, v := range expected {
-		assert.EqualValues(t, v, results[i], "Did not receive '%#v' event", v)
+		r := results[i]
+		r.snapshot.parent = nil
+		assert.EqualValues(t, v.previousKey, r.previousKey, "PK do not match, index %d", i)
+		assert.EqualValues(t, v.snapshot, r.snapshot, "Snapshots do not match, index %d", i)
+	}
+}
+
+func TestChildRemoved(t *testing.T) {
+	server := firetest.New()
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil).Child("foo")
+
+	// set some existing values that should come down
+	server.Set("foo/something", true)
+	server.Set("foo/AAA", "foo")
+
+	var results []testEvents
+	fn := func(snapshot *DataSnapshot, previousChildKey string) {
+		results = append(results, testEvents{snapshot, previousChildKey})
+	}
+	err := fb.ChildRemoved(fn)
+	require.NoError(t, err)
+
+	// should get regular deletion events
+	err = fb.Child("AAA").Remove()
+	require.NoError(t, err)
+
+	err = fb.Child("something").Remove()
+	require.NoError(t, err)
+
+	// should get event for something that was deleted that
+	// was created after connection was established
+	err = fb.Child("foobar").Set("eep!")
+	require.NoError(t, err)
+
+	err = fb.Child("foobar").Remove()
+	require.NoError(t, err)
+
+	err = fb.Child("troll1").Set("yes1")
+	require.NoError(t, err)
+	err = fb.Child("troll2").Set("yes2")
+	require.NoError(t, err)
+	err = fb.Child("troll3").Set("yes3")
+	require.NoError(t, err)
+
+	err = fb.Remove()
+	require.NoError(t, err)
+
+	// wait for all notifications to come down
+	time.Sleep(time.Millisecond)
+
+	expected := []testEvents{
+		{newSnapshot("foo"), ""},
+		{newSnapshot(true), ""},
+		{newSnapshot("eep!"), ""},
+		{newSnapshot("yes1"), ""},
+		{newSnapshot("yes2"), ""},
+		{newSnapshot("yes3"), ""},
+	}
+
+	assert.Len(t, results, len(expected))
+	for i, v := range expected {
+		r := results[i]
+		r.snapshot.parent = nil
+		assert.EqualValues(t, v.previousKey, r.previousKey, "PK do not match, index %d", i)
+		assert.EqualValues(t, v.snapshot, r.snapshot, "Snapshots do not match, index %d", i)
 	}
 }
 
@@ -84,7 +151,7 @@ func TestRemoveEventFunc(t *testing.T) {
 
 	fb := New(server.URL, nil)
 
-	fn := func(snapshot DataSnapshot, previousChildKey string) {
+	fn := func(snapshot *DataSnapshot, previousChildKey string) {
 		assert.Fail(t, "Should not have received anything")
 	}
 	err := fb.ChildAdded(fn)
