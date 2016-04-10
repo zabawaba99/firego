@@ -68,7 +68,7 @@ func TestChildAdded(t *testing.T) {
 		{newSnapshot(float64(2)), "something"},
 		{newSnapshot(map[string]interface{}{"hi": "mom"}), "foo"},
 		{newSnapshot("gaga oh la la"), "bar"},
-		{newSnapshot("something-else"), strings.TrimPrefix(fbChild.String(), fb.String()+"/")},
+		{newSnapshot("something-else"), strings.TrimPrefix(fbChild.url, fb.url+"/")},
 	}
 
 	assert.Len(t, results, len(expected))

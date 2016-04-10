@@ -15,23 +15,7 @@ type ChildEventFunc func(snapshot *DataSnapshot, previousChildKey string)
 // ChildAdded listens on the firebase instance and executes the callback
 // for every child that is added.
 func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
-	fb.eventMtx.Lock()
-	defer fb.eventMtx.Unlock()
-
-	stop := make(chan struct{})
-	key := fmt.Sprintf("%v", fn)
-	if _, ok := fb.eventFuncs[key]; ok {
-		return nil
-	}
-
-	fb.eventFuncs[key] = stop
-
-	notifications, err := fb.watch(stop)
-	if err != nil {
-		return err
-	}
-
-	go func() {
+	handleSSE := func(notifications chan Event) {
 		first, ok := <-notifications
 		if !ok {
 			return
@@ -83,29 +67,13 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 			fn(snapshot, pk)
 			pk = child
 		}
-	}()
+	}
 
-	return nil
+	return fb.addEventFunc(fn, handleSSE)
 }
 
 func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
-	fb.eventMtx.Lock()
-	defer fb.eventMtx.Unlock()
-
-	stop := make(chan struct{})
-	key := fmt.Sprintf("%v", fn)
-	if _, ok := fb.eventFuncs[key]; ok {
-		return nil
-	}
-
-	fb.eventFuncs[key] = stop
-
-	notifications, err := fb.watch(stop)
-	if err != nil {
-		return err
-	}
-
-	go func() {
+	handleSSE := func(notifications chan Event) {
 		first, ok := <-notifications
 		if !ok {
 			return
@@ -156,8 +124,28 @@ func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 			db.del(path)
 
 		}
-	}()
+	}
+	return fb.addEventFunc(fn, handleSSE)
+}
 
+func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE func(chan Event)) error {
+	fb.eventMtx.Lock()
+	defer fb.eventMtx.Unlock()
+
+	stop := make(chan struct{})
+	key := fmt.Sprintf("%v", fn)
+	if _, ok := fb.eventFuncs[key]; ok {
+		return nil
+	}
+
+	fb.eventFuncs[key] = stop
+
+	notifications, err := fb.watch(stop)
+	if err != nil {
+		return err
+	}
+
+	go handleSSE(notifications)
 	return nil
 }
 
