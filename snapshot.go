@@ -3,6 +3,7 @@ package firego
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // DataSnapshot instances contains data from a Firebase reference.
@@ -55,13 +56,22 @@ func (d *DataSnapshot) Value() interface{} {
 	return d.value
 }
 
+// Child gets a DataSnapshot for the location at the specified relative path.
+// The relative path can either be a simple child key (e.g. 'fred') or a deeper
+// slash-separated path (e.g. 'fred/name/first').
 func (d *DataSnapshot) Child(name string) (*DataSnapshot, bool) {
-	s, ok := d.children[name]
-	return s, ok
-}
+	rabbitHole := strings.Split(sanitizePath(name), "/")
+	current := d
+	for i := 0; i < len(rabbitHole); i++ {
+		next, ok := d.children[rabbitHole[i]]
+		if !ok {
+			// item does not exist, no need to do anything
+			return nil, false
+		}
 
-func (d *DataSnapshot) isNil() bool {
-	return d.value == nil && len(d.children) == 0
+		current = next
+	}
+	return current, true
 }
 
 func (d *DataSnapshot) merge(newSnapshot *DataSnapshot) {
