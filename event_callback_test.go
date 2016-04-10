@@ -42,6 +42,7 @@ func TestChildAdded(t *testing.T) {
 
 	fbChild, err := fb.Push("gaga oh la la")
 	require.NoError(t, err)
+	pushKey := strings.TrimPrefix(fbChild.url, fb.url+"/")
 
 	// should not get updates
 	err = fb.Child("foo").Set(false)
@@ -63,12 +64,12 @@ func TestChildAdded(t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	expected := []testEvents{
-		{newSnapshot("foo"), ""},
-		{newSnapshot(true), "AAA"},
-		{newSnapshot(float64(2)), "something"},
-		{newSnapshot(map[string]interface{}{"hi": "mom"}), "foo"},
-		{newSnapshot("gaga oh la la"), "bar"},
-		{newSnapshot("something-else"), strings.TrimPrefix(fbChild.url, fb.url+"/")},
+		{newSnapshot("AAA", "foo"), ""},
+		{newSnapshot("something", true), "AAA"},
+		{newSnapshot("foo", float64(2)), "something"},
+		{newSnapshot("bar", map[string]interface{}{"hi": "mom"}), "foo"},
+		{newSnapshot(pushKey, "gaga oh la la"), "bar"},
+		{newSnapshot("bar", "something-else"), pushKey},
 	}
 
 	assert.Len(t, results, len(expected))
@@ -127,12 +128,12 @@ func TestChildRemoved(t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	expected := []testEvents{
-		{newSnapshot("foo"), ""},
-		{newSnapshot(true), ""},
-		{newSnapshot("eep!"), ""},
-		{newSnapshot("yes1"), ""},
-		{newSnapshot("yes2"), ""},
-		{newSnapshot("yes3"), ""},
+		{newSnapshot("AAA", "foo"), ""},
+		{newSnapshot("something", true), ""},
+		{newSnapshot("foobar", "eep!"), ""},
+		{newSnapshot("troll1", "yes1"), ""},
+		{newSnapshot("troll2", "yes2"), ""},
+		{newSnapshot("troll3", "yes3"), ""},
 	}
 
 	assert.Len(t, results, len(expected))

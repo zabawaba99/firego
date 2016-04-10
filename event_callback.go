@@ -37,7 +37,7 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 
 			for _, k := range orderedChildren {
 				v := children[k]
-				snapshot := newSnapshot(v)
+				snapshot := newSnapshot(k, v)
 				db.add(k, snapshot)
 				fn(snapshot, pk)
 				pk = k
@@ -56,12 +56,12 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 				continue
 			}
 
-			if _, ok := db.rootNode.Child(child); ok {
+			if _, ok := db.root.Child(child); ok {
 				// if the child isn't being added, forget it
 				continue
 			}
 
-			snapshot := newSnapshot(event.Data)
+			snapshot := newSnapshot(child, event.Data)
 			db.add(sanitizePath(child), snapshot)
 
 			fn(snapshot, pk)
@@ -80,11 +80,11 @@ func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 		}
 
 		db := newDatabase()
-		db.add("", newSnapshot(first.Data))
+		db.add("", newSnapshot("", first.Data))
 
 		for event := range notifications {
 			path := sanitizePath(event.Path)
-			snapshot := newSnapshot(event.Data)
+			snapshot := newSnapshot(path, event.Data)
 
 			if event.Type == "patch" {
 				db.update(path, snapshot)
@@ -107,9 +107,9 @@ func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 
 			// if node that is being listened to is deleted,
 			// an event should be triggered for every child
-			orderedChildren := make([]string, len(db.rootNode.children))
+			orderedChildren := make([]string, len(db.root.children))
 			var i int
-			for k := range db.rootNode.children {
+			for k := range db.root.children {
 				orderedChildren[i] = k
 				i++
 			}
