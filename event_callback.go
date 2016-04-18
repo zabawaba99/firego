@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/zabawaba99/firego/sync"
 )
 
 // ChildEventFunc is the type of function that is called for every
 // new child added under a firebase reference. The snapshot argument
 // contains the data that was added. The previousChildKey argument
 // contains the key of the previous child that this function was called for.
-type ChildEventFunc func(snapshot *DataSnapshot, previousChildKey string)
+type ChildEventFunc func(snapshot DataSnapshot, previousChildKey string)
 
 // ChildAdded listens on the firebase instance and executes the callback
 // for every child that is added.
@@ -22,7 +24,7 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 		}
 
 		var pk string
-		db := newDatabase()
+		db := sync.NewDB()
 		children, ok := first.Data.(map[string]interface{})
 		if ok {
 			// we've got children so send an event per child
@@ -37,9 +39,9 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 
 			for _, k := range orderedChildren {
 				v := children[k]
-				snapshot := newSnapshot(k, v)
-				db.add(k, snapshot)
-				fn(snapshot, pk)
+				node := sync.NewNode(k, v)
+				db.Add(k, node)
+				fn(newSnapshot(node), pk)
 				pk = k
 			}
 		}
@@ -52,19 +54,19 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 			child := strings.Split(event.Path[1:], "/")[0]
 			if event.Data == nil {
 				// delete
-				db.del(child)
+				db.Del(child)
 				continue
 			}
 
-			if _, ok := db.root.Child(child); ok {
+			if _, ok := db.Get("").Child(child); ok {
 				// if the child isn't being added, forget it
 				continue
 			}
 
-			snapshot := newSnapshot(child, event.Data)
-			db.add(sanitizePath(child), snapshot)
+			node := sync.NewNode(child, event.Data)
+			db.Add(sanitizePath(child), node)
 
-			fn(snapshot, pk)
+			fn(newSnapshot(node), pk)
 			pk = child
 		}
 	}
@@ -79,37 +81,39 @@ func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 			return
 		}
 
-		db := newDatabase()
-		db.add("", newSnapshot("", first.Data))
+		db := sync.NewDB()
+		node := sync.NewNode("", first.Data)
+		db.Add("", node)
 
 		for event := range notifications {
 			path := sanitizePath(event.Path)
-			snapshot := newSnapshot(path, event.Data)
+			node := sync.NewNode(path, event.Data)
 
 			if event.Type == "patch" {
-				db.update(path, snapshot)
+				db.Update(path, node)
 				continue
 			}
 
 			if event.Data != nil {
-				db.add(path, snapshot)
+				db.Add(path, node)
 				continue
 			}
 
 			// if node is not root, notify for child and move along
 			if path != "" {
-				snapshot = db.get(path)
-				fn(snapshot, "")
-				db.del(path)
+				node = db.Get(path)
+				fn(newSnapshot(node), "")
+				db.Del(path)
 
 				continue
 			}
 
 			// if node that is being listened to is deleted,
 			// an event should be triggered for every child
-			orderedChildren := make([]string, len(db.root.children))
+			children := db.Get("").Children
+			orderedChildren := make([]string, len(children))
 			var i int
-			for k := range db.root.children {
+			for k := range children {
 				orderedChildren[i] = k
 				i++
 			}
@@ -117,12 +121,12 @@ func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 			sort.Strings(orderedChildren)
 
 			for _, k := range orderedChildren {
-				fn(db.get(k), "")
-				db.del(k)
+				node := db.Get(k)
+				fn(newSnapshot(node), "")
+				db.Del(k)
 			}
 
-			db.del(path)
-
+			db.Del(path)
 		}
 	}
 	return fb.addEventFunc(fn, handleSSE)

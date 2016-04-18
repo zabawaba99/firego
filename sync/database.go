@@ -1,20 +1,20 @@
-package firego
+package sync
 
 import "strings"
 
-type database struct {
-	root *DataSnapshot
+type Database struct {
+	root *Node
 }
 
-func newDatabase() *database {
-	return &database{
-		root: &DataSnapshot{
-			children: map[string]*DataSnapshot{},
+func NewDB() *Database {
+	return &Database{
+		root: &Node{
+			Children: map[string]*Node{},
 		},
 	}
 }
 
-func (d *database) add(path string, n *DataSnapshot) {
+func (d *Database) Add(path string, n *Node) {
 	if path == "" {
 		d.root = n
 		return
@@ -24,49 +24,54 @@ func (d *database) add(path string, n *DataSnapshot) {
 	current := d.root
 	for i := 0; i < len(rabbitHole)-1; i++ {
 		step := rabbitHole[i]
-		next, ok := current.children[step]
+		next, ok := current.Children[step]
 		if !ok {
-			next = &DataSnapshot{
-				parent:   current,
-				children: map[string]*DataSnapshot{},
+			next = &Node{
+				Parent:   current,
+				Key:      step,
+				Children: map[string]*Node{},
 			}
-			current.children[step] = next
+			current.Children[step] = next
 		}
-		next.value = nil // no long has a value since it now has a child
+		next.Value = nil // no long has a value since it now has a child
 		current, next = next, nil
 	}
 
 	lastPath := rabbitHole[len(rabbitHole)-1]
-	current.children[lastPath] = n
-	n.parent = current
+	current.Children[lastPath] = n
+	n.Parent = current
 }
 
-func (d *database) update(path string, n *DataSnapshot) {
+func (d *Database) Update(path string, n *Node) {
 	current := d.root
 	rabbitHole := strings.Split(path, "/")
 
 	for i := 0; i < len(rabbitHole); i++ {
-		path := rabbitHole[i]
-		if path == "" {
+		step := rabbitHole[i]
+		if step == "" {
 			// prevent against empty strings due to strings.Split
 			continue
 		}
-		next, ok := current.children[path]
+		next, ok := current.Children[step]
 		if !ok {
-			next = &DataSnapshot{parent: current, children: map[string]*DataSnapshot{}}
-			current.children[path] = next
+			next = &Node{
+				Parent:   current,
+				Key:      step,
+				Children: map[string]*Node{},
+			}
+			current.Children[step] = next
 		}
-		next.value = nil // no long has a value since it now has a child
+		next.Value = nil // no long has a value since it now has a child
 		current, next = next, nil
 	}
 
 	current.merge(n)
 }
 
-func (d *database) del(path string) {
+func (d *Database) Del(path string) {
 	if path == "" {
-		d.root = &DataSnapshot{
-			children: map[string]*DataSnapshot{},
+		d.root = &Node{
+			Children: map[string]*Node{},
 		}
 		return
 	}
@@ -77,7 +82,7 @@ func (d *database) del(path string) {
 	// traverse to target node's parent
 	var delIdx int
 	for ; delIdx < len(rabbitHole)-1; delIdx++ {
-		next, ok := current.children[rabbitHole[delIdx]]
+		next, ok := current.Children[rabbitHole[delIdx]]
 		if !ok {
 			// item does not exist, no need to do anything
 			return
@@ -88,7 +93,7 @@ func (d *database) del(path string) {
 
 	endNode := current
 	leafPath := rabbitHole[len(rabbitHole)-1]
-	delete(endNode.children, leafPath)
+	delete(endNode.Children, leafPath)
 
 	for tmp := endNode.prune(); tmp != nil; tmp = tmp.prune() {
 		delIdx--
@@ -96,11 +101,11 @@ func (d *database) del(path string) {
 	}
 
 	if endNode != nil {
-		delete(endNode.children, rabbitHole[delIdx])
+		delete(endNode.Children, rabbitHole[delIdx])
 	}
 }
 
-func (d *database) get(path string) *DataSnapshot {
+func (d *Database) Get(path string) *Node {
 	current := d.root
 	if path == "" {
 		return current
@@ -109,7 +114,7 @@ func (d *database) get(path string) *DataSnapshot {
 	rabbitHole := strings.Split(path, "/")
 	for i := 0; i < len(rabbitHole); i++ {
 		var ok bool
-		current, ok = current.children[rabbitHole[i]]
+		current, ok = current.Children[rabbitHole[i]]
 		if !ok {
 			return nil
 		}
