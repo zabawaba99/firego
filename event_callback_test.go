@@ -7,11 +7,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zabawaba99/firego/sync"
 	"github.com/zabawaba99/firetest"
 )
 
 type testEvents struct {
-	snapshot    *DataSnapshot
+	snapshot    DataSnapshot
 	previousKey string
 }
 
@@ -27,7 +28,7 @@ func TestChildAdded(t *testing.T) {
 	server.Set("AAA", "foo")
 
 	var results []testEvents
-	fn := func(snapshot *DataSnapshot, previousChildKey string) {
+	fn := func(snapshot DataSnapshot, previousChildKey string) {
 		results = append(results, testEvents{snapshot, previousChildKey})
 	}
 	err := fb.ChildAdded(fn)
@@ -64,18 +65,18 @@ func TestChildAdded(t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	expected := []testEvents{
-		{newSnapshot("AAA", "foo"), ""},
-		{newSnapshot("something", true), "AAA"},
-		{newSnapshot("foo", float64(2)), "something"},
-		{newSnapshot("bar", map[string]interface{}{"hi": "mom"}), "foo"},
-		{newSnapshot(pushKey, "gaga oh la la"), "bar"},
-		{newSnapshot("bar", "something-else"), pushKey},
+		{newSnapshot(sync.NewNode("AAA", "foo")), ""},
+		{newSnapshot(sync.NewNode("something", true)), "AAA"},
+		{newSnapshot(sync.NewNode("foo", float64(2))), "something"},
+		{newSnapshot(sync.NewNode("bar", map[string]interface{}{"hi": "mom"})), "foo"},
+		{newSnapshot(sync.NewNode(pushKey, "gaga oh la la")), "bar"},
+		{newSnapshot(sync.NewNode("bar", "something-else")), pushKey},
 	}
 
 	assert.Len(t, results, len(expected))
 	for i, v := range expected {
 		r := results[i]
-		r.snapshot.parent = nil
+		r.snapshot.node.Parent = nil
 		assert.EqualValues(t, v.previousKey, r.previousKey, "PK do not match, index %d", i)
 		assert.EqualValues(t, v.snapshot, r.snapshot, "Snapshots do not match, index %d", i)
 	}
@@ -93,7 +94,7 @@ func TestChildRemoved(t *testing.T) {
 	server.Set("foo/AAA", "foo")
 
 	var results []testEvents
-	fn := func(snapshot *DataSnapshot, previousChildKey string) {
+	fn := func(snapshot DataSnapshot, previousChildKey string) {
 		results = append(results, testEvents{snapshot, previousChildKey})
 	}
 	err := fb.ChildRemoved(fn)
@@ -128,18 +129,18 @@ func TestChildRemoved(t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	expected := []testEvents{
-		{newSnapshot("AAA", "foo"), ""},
-		{newSnapshot("something", true), ""},
-		{newSnapshot("foobar", "eep!"), ""},
-		{newSnapshot("troll1", "yes1"), ""},
-		{newSnapshot("troll2", "yes2"), ""},
-		{newSnapshot("troll3", "yes3"), ""},
+		{newSnapshot(sync.NewNode("AAA", "foo")), ""},
+		{newSnapshot(sync.NewNode("something", true)), ""},
+		{newSnapshot(sync.NewNode("foobar", "eep!")), ""},
+		{newSnapshot(sync.NewNode("troll1", "yes1")), ""},
+		{newSnapshot(sync.NewNode("troll2", "yes2")), ""},
+		{newSnapshot(sync.NewNode("troll3", "yes3")), ""},
 	}
 
 	assert.Len(t, results, len(expected))
 	for i, v := range expected {
 		r := results[i]
-		r.snapshot.parent = nil
+		r.snapshot.node.Parent = nil
 		assert.EqualValues(t, v.previousKey, r.previousKey, "PK do not match, index %d", i)
 		assert.EqualValues(t, v.snapshot, r.snapshot, "Snapshots do not match, index %d", i)
 	}
@@ -152,7 +153,7 @@ func TestRemoveEventFunc(t *testing.T) {
 
 	fb := New(server.URL, nil)
 
-	fn := func(snapshot *DataSnapshot, previousChildKey string) {
+	fn := func(snapshot DataSnapshot, previousChildKey string) {
 		assert.Fail(t, "Should not have received anything")
 	}
 	err := fb.ChildAdded(fn)
