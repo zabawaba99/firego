@@ -137,10 +137,8 @@ Check the [GoDocs](http://godoc.org/github.com/zabawaba99/firego) or
 
 ## Running Tests
 
-In order to run the tests you need to `go get`:
-
-* `github.com/stretchr/testify/require`
-* `github.com/stretchr/testify/assert`
+In order to run the tests you need to `go get -t ./...`
+first to go-get the test dependencies.
 
 ## Issues Management
 
