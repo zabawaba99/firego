@@ -4,14 +4,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zabawaba99/firetest"
 )
 
 const URL = "https://somefirebaseapp.firebaseIO.com"
+
+const authToken = "token"
 
 type TestServer struct {
 	*httptest.Server
@@ -58,6 +62,123 @@ func TestNewWithProvidedHttpClient(t *testing.T) {
 		assert.Equal(t, URL, fb.url, "givenURL: %s", url)
 		assert.Equal(t, client, fb.client)
 	}
+}
+
+func TestAuth(t *testing.T) {
+	t.Parallel()
+	server := firetest.New()
+	server.Start()
+	defer server.Close()
+
+	server.RequireAuth(true)
+	fb := New(server.URL, nil)
+
+	fb.Auth(server.Secret)
+	var v interface{}
+	err := fb.Value(&v)
+	assert.NoError(t, err)
+}
+
+func TestUnauth(t *testing.T) {
+	t.Parallel()
+	server := firetest.New()
+	server.Start()
+	defer server.Close()
+
+	server.RequireAuth(true)
+	fb := New(server.URL, nil)
+
+	fb.params.Add("auth", server.Secret)
+	fb.Unauth()
+	err := fb.Value("")
+	assert.Error(t, err)
+}
+
+func TestPush(t *testing.T) {
+	t.Parallel()
+	var (
+		payload = map[string]interface{}{"foo": "bar"}
+		server  = firetest.New()
+	)
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil)
+	childRef, err := fb.Push(payload)
+	assert.NoError(t, err)
+
+	path := strings.TrimPrefix(childRef.String(), server.URL+"/")
+	v := server.Get(path)
+	assert.Equal(t, payload, v)
+}
+
+func TestRemove(t *testing.T) {
+	t.Parallel()
+	server := firetest.New()
+	server.Start()
+	defer server.Close()
+
+	server.Set("", true)
+
+	fb := New(server.URL, nil)
+	err := fb.Remove()
+	assert.NoError(t, err)
+
+	v := server.Get("")
+	assert.Nil(t, v)
+}
+
+func TestSet(t *testing.T) {
+	t.Parallel()
+	var (
+		payload = map[string]interface{}{"foo": "bar"}
+		server  = firetest.New()
+	)
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil)
+	err := fb.Set(payload)
+	assert.NoError(t, err)
+
+	v := server.Get("")
+	assert.Equal(t, payload, v)
+}
+
+func TestUpdate(t *testing.T) {
+	t.Parallel()
+	var (
+		payload = map[string]interface{}{"foo": "bar"}
+		server  = firetest.New()
+	)
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil)
+	err := fb.Update(payload)
+	assert.NoError(t, err)
+
+	v := server.Get("")
+	assert.Equal(t, payload, v)
+}
+
+func TestValue(t *testing.T) {
+	t.Parallel()
+	var (
+		response = map[string]interface{}{"foo": "bar"}
+		server   = firetest.New()
+	)
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil)
+
+	server.Set("", response)
+
+	var v map[string]interface{}
+	err := fb.Value(&v)
+	assert.NoError(t, err)
+	assert.Equal(t, response, v)
 }
 
 func TestChild(t *testing.T) {
