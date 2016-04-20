@@ -206,13 +206,16 @@ func TestTimeoutDuration_Headers(t *testing.T) {
 	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
 	TimeoutDuration = time.Millisecond
 
+	done := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(2 * TimeoutDuration)
+		close(done)
 	}))
 	defer server.Close()
 
 	fb := New(server.URL, nil)
 	err := fb.Value("")
+	<-done
 	assert.NotNil(t, err)
 	assert.IsType(t, ErrTimeout{}, err)
 
