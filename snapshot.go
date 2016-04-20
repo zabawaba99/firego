@@ -18,7 +18,7 @@ func (d *DataSnapshot) Key() string {
 
 // Value retrieves the data contained in this snapshot.
 func (d *DataSnapshot) Value() interface{} {
-	return d.node.Value
+	return d.node.Objectify()
 }
 
 // Child gets a DataSnapshot for the location at the specified relative path.
