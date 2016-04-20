@@ -7,9 +7,15 @@ import (
 	"strings"
 )
 
-// EventTypeError is the type that is set on an Event struct if an
-// error occurs while watching a Firebase reference.
-const EventTypeError = "event_error"
+const (
+	EventTypePut         = "put"
+	EventTypePatch       = "patch"
+	eventTypeKeepAlive   = "keep-alive"
+	eventTypeCancel      = "cancel"
+	eventTypeAuthRevoked = "auth_revoked"
+	eventTypeRulesDebug  = "rules_debug"
+	EventTypeError       = "event_error"
+)
 
 // Event represents a notification received when watching a
 // firebase reference.
@@ -173,8 +179,8 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 
 			// should be reacting differently based off the type of event
 			switch event.Type {
-			case "put", "patch": // we've got extra data we've got to parse
-				// the extra data is in json format
+			case EventTypePut, EventTypePatch:
+				// we've got extra data we've got to parse
 				var data map[string]interface{}
 				if err := json.Unmarshal([]byte(strings.Replace(parts[1], "data: ", "", 1)), &data); err != nil {
 					scanErr = err
@@ -187,9 +193,9 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 
 				// ship it
 				notifications <- event
-			case "keep-alive":
+			case eventTypeKeepAlive:
 				// received ping - nothing to do here
-			case "cancel":
+			case eventTypeCancel:
 				// The data for this event is null
 				// This event will be sent if the Security and Firebase Rules
 				// cause a read at the requested location to no longer be allowed
@@ -197,12 +203,12 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 				// send the cancel event
 				notifications <- event
 				break scanning
-			case "auth_revoked":
+			case eventTypeAuthRevoked:
 				// The data for this event is a string indicating that a the credential has expired
 				// This event will be sent when the supplied auth parameter is no longer valid
 
 				// TODO: handle
-			case "rules_debug":
+			case eventTypeRulesDebug:
 				log.Printf("Rules-Debug: %s\n", txt)
 			}
 		}

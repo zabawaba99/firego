@@ -47,7 +47,7 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 		}
 
 		for event := range notifications {
-			if event.Type != "put" {
+			if event.Type != EventTypePut {
 				continue
 			}
 
@@ -89,7 +89,7 @@ func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 			path := strings.Trim(event.Path, "/")
 			node := sync.NewNode(path, event.Data)
 
-			if event.Type == "patch" {
+			if event.Type == EventTypePatch {
 				db.Update(path, node)
 				continue
 			}
