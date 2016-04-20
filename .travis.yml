@@ -31,7 +31,24 @@ script:
   - go vet ./...
   # run tests
   - go get -t
-  - $HOME/gopath/bin/goveralls -service=travis-ci -repotoken=$COVERALLS -v
+  - go test -a -race -v ./...
+
+after_success:
+  - |
+    echo "mode: count" > profile.cov
+    for dir in $(find . -maxdepth 10 -not -path 'vendor' -not -path './.git*' -not -path '*/_*' -type d);
+    do
+    if ls $dir/*.go &> /dev/null; then
+      go test -covermode=count -coverprofile=$dir/profile.tmp $dir
+      if [ -f $dir/profile.tmp ]
+      then
+        cat $dir/profile.tmp | tail -n +2 >> profile.cov
+        rm $dir/profile.tmp
+      fi
+    fi
+    done
+    go tool cover -func profile.cov
+    goveralls -coverprofile=profile.cov -service=travis-ci -repotoken=$COVERALLS -v
 
 after_script:
   # check possible styling errors
