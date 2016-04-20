@@ -17,97 +17,94 @@ type ChildEventFunc func(snapshot DataSnapshot, previousChildKey string)
 // ChildAdded listens on the firebase instance and executes the callback
 // for every child that is added.
 func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
-	handleSSE := func(notifications chan Event) {
-		first, ok := <-notifications
-		if !ok {
-			return
+	return fb.addEventFunc(fn, childAdded)
+}
+
+func childAdded(fn ChildEventFunc, notifications chan Event) {
+	first, ok := <-notifications
+	if !ok {
+		return
+	}
+
+	var pk string
+	db := sync.NewDB()
+	children, ok := first.Data.(map[string]interface{})
+	if ok {
+		// we've got children so send an event per child
+		orderedChildren := make([]string, len(children))
+		var i int
+		for k := range children {
+			orderedChildren[i] = k
+			i++
 		}
 
-		var pk string
-		db := sync.NewDB()
-		children, ok := first.Data.(map[string]interface{})
-		if ok {
-			// we've got children so send an event per child
-			orderedChildren := make([]string, len(children))
-			var i int
-			for k := range children {
-				orderedChildren[i] = k
-				i++
-			}
+		sort.Strings(orderedChildren)
 
-			sort.Strings(orderedChildren)
-
-			for _, k := range orderedChildren {
-				v := children[k]
-				node := sync.NewNode(k, v)
-				db.Add(k, node)
-				fn(newSnapshot(node), pk)
-				pk = k
-			}
-		}
-
-		for event := range notifications {
-			if event.Type != EventTypePut {
-				continue
-			}
-
-			child := strings.Split(event.Path[1:], "/")[0]
-			if event.Data == nil {
-				// delete
-				db.Del(child)
-				continue
-			}
-
-			if _, ok := db.Get("").Child(child); ok {
-				// if the child isn't being added, forget it
-				continue
-			}
-
-			node := sync.NewNode(child, event.Data)
-			db.Add(strings.Trim(child, "/"), node)
-
+		for _, k := range orderedChildren {
+			v := children[k]
+			node := sync.NewNode(k, v)
+			db.Add(k, node)
 			fn(newSnapshot(node), pk)
-			pk = child
+			pk = k
 		}
 	}
 
-	return fb.addEventFunc(fn, handleSSE)
-}
-
-func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
-	handleSSE := func(notifications chan Event) {
-		first, ok := <-notifications
-		if !ok {
-			return
+	for event := range notifications {
+		if event.Type != EventTypePut {
+			continue
 		}
 
-		db := sync.NewDB()
-		node := sync.NewNode("", first.Data)
-		db.Add("", node)
+		child := strings.Split(event.Path[1:], "/")[0]
+		if event.Data == nil {
+			// delete
+			db.Del(child)
+			continue
+		}
 
-		for event := range notifications {
-			path := strings.Trim(event.Path, "/")
-			node := sync.NewNode(path, event.Data)
+		if _, ok := db.Get("").Child(child); ok {
+			// if the child isn't being added, forget it
+			continue
+		}
 
-			if event.Type == EventTypePatch {
-				db.Update(path, node)
-				continue
-			}
+		node := sync.NewNode(child, event.Data)
+		db.Add(strings.Trim(child, "/"), node)
 
-			if event.Data != nil {
-				db.Add(path, node)
-				continue
-			}
+		fn(newSnapshot(node), pk)
+		pk = child
+	}
+}
 
-			// if node is not root, notify for child and move along
-			if path != "" {
-				node = db.Get(path)
-				fn(newSnapshot(node), "")
-				db.Del(path)
+// ChildRemoved listens on the firebase instance and executes the callback
+// for every child that is deleted.
+func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
+	return fb.addEventFunc(fn, childRemoved)
+}
 
-				continue
-			}
+func childRemoved(fn ChildEventFunc, notifications chan Event) {
+	first, ok := <-notifications
+	if !ok {
+		return
+	}
 
+	db := sync.NewDB()
+	node := sync.NewNode("", first.Data)
+	db.Add("", node)
+
+	for event := range notifications {
+		path := strings.Trim(event.Path, "/")
+		node := sync.NewNode(path, event.Data)
+
+		if event.Type == EventTypePatch {
+			db.Update(path, node)
+			continue
+		}
+
+		if event.Data != nil {
+			db.Add(path, node)
+			continue
+		}
+
+		if path == "" {
 			// if node that is being listened to is deleted,
 			// an event should be triggered for every child
 			children := db.Get("").Children
@@ -127,12 +124,16 @@ func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 			}
 
 			db.Del(path)
+			continue
 		}
+
+		node = db.Get(path)
+		fn(newSnapshot(node), "")
+		db.Del(path)
 	}
-	return fb.addEventFunc(fn, handleSSE)
 }
 
-func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE func(chan Event)) error {
+func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE func(ChildEventFunc, chan Event)) error {
 	fb.eventMtx.Lock()
 	defer fb.eventMtx.Unlock()
 
@@ -149,7 +150,7 @@ func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE func(chan Event)) 
 		return err
 	}
 
-	go handleSSE(notifications)
+	go handleSSE(fn, notifications)
 	return nil
 }
 
