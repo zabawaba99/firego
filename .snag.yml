@@ -1,0 +1,16 @@
+---
+# Snag configuartion
+#
+# Make sure you modify this file to get started.
+# If you have any questions please refer to https://github.com/Tonkpils/snag
+#
+verbose: true
+
+ignore:
+  - .git
+
+build:
+  - go build
+  - gofmt -l -s .
+  - go vet ./...
+  - go test ./...

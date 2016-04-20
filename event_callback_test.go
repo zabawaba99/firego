@@ -2,6 +2,7 @@ package firego
 
 import (
 	"strings"
+	syncc "sync"
 	"testing"
 	"time"
 
@@ -11,9 +12,34 @@ import (
 	"github.com/zabawaba99/firetest"
 )
 
-type testEvents struct {
+type testEvent struct {
 	snapshot    DataSnapshot
 	previousKey string
+}
+
+type testEvents struct {
+	mtx    syncc.Mutex
+	events []testEvent
+}
+
+func (te *testEvents) add(event testEvent) {
+	te.mtx.Lock()
+	te.events = append(te.events, event)
+	te.mtx.Unlock()
+}
+
+func (te *testEvents) get(i int) testEvent {
+	te.mtx.Lock()
+	event := te.events[i]
+	te.mtx.Unlock()
+	return event
+}
+
+func (te *testEvents) len() int {
+	te.mtx.Lock()
+	l := len(te.events)
+	te.mtx.Unlock()
+	return l
 }
 
 func TestChildAdded(t *testing.T) {
@@ -27,9 +53,12 @@ func TestChildAdded(t *testing.T) {
 	server.Set("something", true)
 	server.Set("AAA", "foo")
 
-	var results []testEvents
+	var results []testEvent
+	var mtx syncc.Mutex
 	fn := func(snapshot DataSnapshot, previousChildKey string) {
-		results = append(results, testEvents{snapshot, previousChildKey})
+		mtx.Lock()
+		results = append(results, testEvent{snapshot, previousChildKey})
+		mtx.Unlock()
 	}
 	err := fb.ChildAdded(fn)
 	require.NoError(t, err)
@@ -64,7 +93,7 @@ func TestChildAdded(t *testing.T) {
 	// wait for all notifications to come down
 	time.Sleep(time.Millisecond)
 
-	expected := []testEvents{
+	expected := []testEvent{
 		{newSnapshot(sync.NewNode("AAA", "foo")), ""},
 		{newSnapshot(sync.NewNode("something", true)), "AAA"},
 		{newSnapshot(sync.NewNode("foo", float64(2))), "something"},
@@ -73,7 +102,10 @@ func TestChildAdded(t *testing.T) {
 		{newSnapshot(sync.NewNode("bar", "something-else")), pushKey},
 	}
 
-	assert.Len(t, results, len(expected))
+	mtx.Lock()
+	defer mtx.Unlock()
+
+	require.Len(t, results, len(expected))
 	for i, v := range expected {
 		r := results[i]
 		r.snapshot.node.Parent = nil
@@ -93,9 +125,12 @@ func TestChildRemoved(t *testing.T) {
 	server.Set("foo/something", true)
 	server.Set("foo/AAA", "foo")
 
-	var results []testEvents
+	var results []testEvent
+	var mtx syncc.Mutex
 	fn := func(snapshot DataSnapshot, previousChildKey string) {
-		results = append(results, testEvents{snapshot, previousChildKey})
+		mtx.Lock()
+		results = append(results, testEvent{snapshot, previousChildKey})
+		mtx.Unlock()
 	}
 	err := fb.ChildRemoved(fn)
 	require.NoError(t, err)
@@ -128,7 +163,7 @@ func TestChildRemoved(t *testing.T) {
 	// wait for all notifications to come down
 	time.Sleep(time.Millisecond)
 
-	expected := []testEvents{
+	expected := []testEvent{
 		{newSnapshot(sync.NewNode("AAA", "foo")), ""},
 		{newSnapshot(sync.NewNode("something", true)), ""},
 		{newSnapshot(sync.NewNode("foobar", "eep!")), ""},
@@ -137,7 +172,10 @@ func TestChildRemoved(t *testing.T) {
 		{newSnapshot(sync.NewNode("troll3", "yes3")), ""},
 	}
 
-	assert.Len(t, results, len(expected))
+	mtx.Lock()
+	defer mtx.Unlock()
+
+	require.Len(t, results, len(expected))
 	for i, v := range expected {
 		r := results[i]
 		r.snapshot.node.Parent = nil
