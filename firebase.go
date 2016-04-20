@@ -205,20 +205,6 @@ func sanitizeURL(url string) string {
 	return url
 }
 
-func sanitizePath(p string) string {
-	// remove slashes from the front and back
-	//	/foo/.json -> foo/.json
-	s := strings.Trim(p, "/")
-
-	// remove .json extension
-	//	foo/.json -> foo/
-	s = strings.TrimSuffix(s, ".json")
-
-	// trim an potential trailing slashes
-	//	foo/ -> foo
-	return strings.TrimSuffix(s, "/")
-}
-
 // Preserve headers on redirect.
 //
 // Reference https://github.com/golang/go/issues/4800

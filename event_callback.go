@@ -64,7 +64,7 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 			}
 
 			node := sync.NewNode(child, event.Data)
-			db.Add(sanitizePath(child), node)
+			db.Add(strings.Trim(child, "/"), node)
 
 			fn(newSnapshot(node), pk)
 			pk = child
@@ -86,7 +86,7 @@ func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 		db.Add("", node)
 
 		for event := range notifications {
-			path := sanitizePath(event.Path)
+			path := strings.Trim(event.Path, "/")
 			node := sync.NewNode(path, event.Data)
 
 			if event.Type == "patch" {
