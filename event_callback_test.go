@@ -67,6 +67,9 @@ func TestChildAdded(t *testing.T) {
 	err = fb.Child("foo").Set(2)
 	require.NoError(t, err)
 
+	err = fb.Set(map[string]string{"lala": "faa", "alal": "aaf"})
+	require.NoError(t, err)
+
 	err = fb.Child("bar").Set(map[string]string{"hi": "mom"})
 	require.NoError(t, err)
 
@@ -97,7 +100,9 @@ func TestChildAdded(t *testing.T) {
 		{newSnapshot(sync.NewNode("AAA", "foo")), ""},
 		{newSnapshot(sync.NewNode("something", true)), "AAA"},
 		{newSnapshot(sync.NewNode("foo", float64(2))), "something"},
-		{newSnapshot(sync.NewNode("bar", map[string]interface{}{"hi": "mom"})), "foo"},
+		{newSnapshot(sync.NewNode("alal", "aaf")), "foo"},
+		{newSnapshot(sync.NewNode("lala", "faa")), "alal"},
+		{newSnapshot(sync.NewNode("bar", map[string]interface{}{"hi": "mom"})), "lala"},
 		{newSnapshot(sync.NewNode(pushKey, "gaga oh la la")), "bar"},
 		{newSnapshot(sync.NewNode("bar", "something-else")), pushKey},
 	}
