@@ -21,27 +21,22 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 }
 
 func childAdded(fn ChildEventFunc, notifications chan Event) {
-	first, ok := <-notifications
-	if !ok {
-		return
-	}
-
 	var pk string
 	db := sync.NewDB()
-	children, ok := first.Data.(map[string]interface{})
-	if ok {
+
+	orderAndSend := func(data map[string]interface{}) {
 		// we've got children so send an event per child
-		orderedChildren := make([]string, len(children))
+		orderedKeys := make([]string, len(data))
 		var i int
-		for k := range children {
-			orderedChildren[i] = k
+		for k := range data {
+			orderedKeys[i] = k
 			i++
 		}
 
-		sort.Strings(orderedChildren)
+		sort.Strings(orderedKeys)
 
-		for _, k := range orderedChildren {
-			v := children[k]
+		for _, k := range orderedKeys {
+			v := data[k]
 			node := sync.NewNode(k, v)
 			db.Add(k, node)
 			fn(newSnapshot(node), pk)
@@ -56,7 +51,6 @@ func childAdded(fn ChildEventFunc, notifications chan Event) {
 
 		child := strings.Split(event.Path[1:], "/")[0]
 		if event.Data == nil {
-			// delete
 			db.Del(child)
 			continue
 		}
@@ -66,6 +60,15 @@ func childAdded(fn ChildEventFunc, notifications chan Event) {
 			continue
 		}
 
+		m, ok := event.Data.(map[string]interface{})
+		if child == "" && ok {
+			// if we were given a map at the root then we have
+			// to send an event per child
+			orderAndSend(m)
+			continue
+		}
+
+		// we have a single event to process
 		node := sync.NewNode(child, event.Data)
 		db.Add(strings.Trim(child, "/"), node)
 
