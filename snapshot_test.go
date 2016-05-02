@@ -10,16 +10,16 @@ import (
 
 func TestDataSnapshotKey(t *testing.T) {
 	n := sync.Node{Key: "foo"}
-	d := DataSnapshot{node: &n}
+	d := newSnapshot(&n)
 
-	assert.Equal(t, n.Key, d.Key())
+	assert.Equal(t, n.Key, d.Key)
 }
 
 func TestDataSnapshotValue(t *testing.T) {
 	n := sync.Node{Value: "foo"}
-	d := DataSnapshot{node: &n}
+	d := newSnapshot(&n)
 
-	assert.Equal(t, n.Value, d.Value())
+	assert.Equal(t, n.Value, d.Value)
 }
 
 func TestDataSnapshotChild(t *testing.T) {
@@ -30,12 +30,12 @@ func TestDataSnapshotChild(t *testing.T) {
 			},
 		},
 	})
-	d := DataSnapshot{node: n}
+	d := newSnapshot(n)
 
 	one, ok := d.Child("one")
 	require.True(t, ok)
-	assert.Equal(t, one.Key(), "one")
-	assert.Equal(t, one.Value(), map[string]interface{}{
+	assert.Equal(t, one.Key, "one")
+	assert.Equal(t, one.Value, map[string]interface{}{
 		"two": map[string]interface{}{
 			"three": true,
 		},
@@ -43,15 +43,15 @@ func TestDataSnapshotChild(t *testing.T) {
 
 	two, ok := one.Child("two")
 	require.True(t, ok)
-	assert.Equal(t, two.Key(), "two")
-	assert.Equal(t, two.Value(), map[string]interface{}{
+	assert.Equal(t, two.Key, "two")
+	assert.Equal(t, two.Value, map[string]interface{}{
 		"three": true,
 	})
 
 	three, ok := two.Child("three")
 	require.True(t, ok)
-	assert.Equal(t, three.Key(), "three")
-	assert.Equal(t, three.Value(), true)
+	assert.Equal(t, three.Key, "three")
+	assert.Equal(t, three.Value, true)
 
 	three2, ok := d.Child("one/two/three")
 	require.True(t, ok)

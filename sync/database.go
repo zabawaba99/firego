@@ -1,6 +1,8 @@
 package sync
 
-import "strings"
+import (
+	"strings"
+)
 
 type Database struct {
 	root *Node
@@ -66,6 +68,7 @@ func (d *Database) Update(path string, n *Node) {
 	}
 
 	current.merge(n)
+
 }
 
 func (d *Database) Del(path string) {
