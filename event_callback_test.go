@@ -113,7 +113,81 @@ func TestChildAdded(t *testing.T) {
 	require.Len(t, results, len(expected))
 	for i, v := range expected {
 		r := results[i]
-		r.snapshot.node.Parent = nil
+
+		assert.EqualValues(t, v.previousKey, r.previousKey, "PK do not match, index %d", i)
+		assert.EqualValues(t, v.snapshot, r.snapshot, "Snapshots do not match, index %d", i)
+	}
+}
+
+func TestChildChanged(t *testing.T) {
+	server := firetest.New()
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil)
+
+	// set some existing values that should come down
+	server.Set("something", true)
+	server.Set("AAA", "foo")
+	server.Set("foo", 432)
+	server.Set("lala", "123")
+	server.Set("alal", "3333")
+	server.Set("bar", 12123123123)
+
+	var results []testEvent
+	var mtx syncc.Mutex
+	fn := func(snapshot DataSnapshot, previousChildKey string) {
+		mtx.Lock()
+		results = append(results, testEvent{snapshot, previousChildKey})
+		mtx.Unlock()
+	}
+	err := fb.ChildChanged(fn)
+	require.NoError(t, err)
+
+	// should get regular update events
+	err = fb.Child("foo").Set(2)
+	require.NoError(t, err)
+
+	err = fb.Set(map[string]string{"lala": "faa", "alal": "aaf"})
+	require.NoError(t, err)
+
+	err = fb.Child("bar").Set(map[string]string{"hi": "mom"})
+	require.NoError(t, err)
+
+	// should not get push
+	_, err = fb.Push("gaga oh la la")
+	require.NoError(t, err)
+
+	// should not get adds
+	err = fb.Child("foo123123").Set(false)
+	require.NoError(t, err)
+
+	// or deletes
+	err = fb.Child("something").Remove()
+	require.NoError(t, err)
+
+	// should not get notifications for addition to a child
+	err = fb.Child("bar/child").Set(true)
+	require.NoError(t, err)
+
+	// wait for all notifications to come down
+	time.Sleep(time.Millisecond)
+
+	expected := []testEvent{
+		{newSnapshot(sync.NewNode("foo", float64(2))), ""},
+		{newSnapshot(sync.NewNode("alal", "aaf")), "foo"},
+		{newSnapshot(sync.NewNode("lala", "faa")), "alal"},
+		{newSnapshot(sync.NewNode("bar", map[string]interface{}{"hi": "mom"})), "lala"},
+		{newSnapshot(sync.NewNode("bar", map[string]interface{}{"hi": "mom", "child": true})), "bar"},
+	}
+
+	mtx.Lock()
+	defer mtx.Unlock()
+
+	require.Len(t, results, len(expected))
+	for i, v := range expected {
+		r := results[i]
+
 		assert.EqualValues(t, v.previousKey, r.previousKey, "PK do not match, index %d", i)
 		assert.EqualValues(t, v.snapshot, r.snapshot, "Snapshots do not match, index %d", i)
 	}
@@ -183,7 +257,7 @@ func TestChildRemoved(t *testing.T) {
 	require.Len(t, results, len(expected))
 	for i, v := range expected {
 		r := results[i]
-		r.snapshot.node.Parent = nil
+
 		assert.EqualValues(t, v.previousKey, r.previousKey, "PK do not match, index %d", i)
 		assert.EqualValues(t, v.snapshot, r.snapshot, "Snapshots do not match, index %d", i)
 	}

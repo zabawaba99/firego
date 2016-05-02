@@ -77,6 +77,71 @@ func childAdded(fn ChildEventFunc, notifications chan Event) {
 	}
 }
 
+// ChildChanged listens on the firebase instance and executes the callback
+// for every child that is changed.
+func (fb *Firebase) ChildChanged(fn ChildEventFunc) error {
+	return fb.addEventFunc(fn, childChanged)
+}
+
+func childChanged(fn ChildEventFunc, notifications chan Event) {
+	first, ok := <-notifications
+	if !ok {
+		return
+	}
+
+	db := sync.NewDB()
+	db.Add("", sync.NewNode("", first.Data))
+
+	var pk string
+	for event := range notifications {
+		path := strings.Trim(event.Path, "/")
+		if event.Data == nil {
+			db.Del(path)
+			continue
+		}
+
+		child := strings.Split(path, "/")[0]
+		node := sync.NewNode(child, event.Data)
+
+		dbNode := db.Get("")
+		if _, ok := dbNode.Child(child); child != "" && !ok {
+			// if the child is new, ignore it.
+			db.Add(path, node)
+			continue
+		}
+
+		if m, ok := event.Data.(map[string]interface{}); child == "" && ok {
+			// we've got children so send an event per child
+			orderedKeys := make([]string, len(m))
+			var i int
+			for k := range m {
+				orderedKeys[i] = k
+				i++
+			}
+
+			sort.Strings(orderedKeys)
+			for _, k := range orderedKeys {
+				v := m[k]
+				node := sync.NewNode(k, v)
+				newPath := strings.TrimPrefix(child+"/"+k, "/")
+				if _, ok := dbNode.Child(k); !ok {
+					db.Add(newPath, node)
+					continue
+				}
+
+				db.Update(newPath, node)
+				fn(newSnapshot(node), pk)
+				pk = k
+			}
+			continue
+		}
+
+		db.Update(path, node)
+		fn(newSnapshot(db.Get(child)), pk)
+		pk = child
+	}
+}
+
 // ChildRemoved listens on the firebase instance and executes the callback
 // for every child that is deleted.
 func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
