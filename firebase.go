@@ -230,6 +230,19 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 	}
 
 	resp, err := fb.client.Do(req)
+
+	// 307 handling.
+	// replay the previous request using the new url in the Location header
+	// Ref :  https://code.google.com/p/go/issues/detail?id=7912
+	if strings.HasPrefix(resp.Status, "307 ") {
+		resp.Body.Close() // close the original
+
+		newPath := resp.Header.Get("Location")
+		req, err = http.NewRequest(method, newPath, bytes.NewReader(body))
+		resp, err = fb.client.Do(req)
+		// TODO What happens if there is another redirect? Unlikely..
+	}
+
 	switch err := err.(type) {
 	default:
 		return nil, err
