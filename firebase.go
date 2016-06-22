@@ -36,6 +36,7 @@ const (
 	formatParam       = "format"
 	shallowParam      = "shallow"
 	orderByParam      = "orderBy"
+	equalToParam      = "equalTo"
 	startAtParam      = "startAt"
 	endAtParam        = "endAt"
 	formatVal         = "export"
