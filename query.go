@@ -62,6 +62,19 @@ func (fb *Firebase) OrderBy(value string) *Firebase {
 	return c
 }
 
+// EqualTo sends the query string equalTo so that one can find a single value
+//
+// Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
+func (fb *Firebase) EqualTo(value string) *Firebase {
+	c := fb.copy()
+	if value != "" {
+		c.params.Set(equalToParam, escapeString(value))
+	} else {
+		c.params.Del(equalToParam)
+	}
+	return c
+}
+
 func escapeString(s string) string {
 	_, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
