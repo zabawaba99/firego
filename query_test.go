@@ -45,6 +45,21 @@ func TestOrderBy(t *testing.T) {
 	assert.Equal(t, orderByParam+"=%22user_id%22", req.URL.Query().Encode())
 }
 
+func TestEqualTo(t *testing.T) {
+	t.Parallel()
+	var (
+		server = newTestServer("")
+		fb     = New(server.URL, nil)
+	)
+	defer server.Close()
+
+	fb.EqualTo("user_id").Value("")
+	require.Len(t, server.receivedReqs, 1)
+
+	req := server.receivedReqs[0]
+	assert.Equal(t, equalToParam+"=%22user_id%22", req.URL.Query().Encode())
+}
+
 func TestLimitToFirst(t *testing.T) {
 	t.Parallel()
 	var (
