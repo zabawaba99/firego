@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 )
@@ -61,7 +62,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	fb.setWatching(true)
 
 	// build SSE request
-	req, err := fb.makeRequest("GET", nil)
+	req, err := http.NewRequest("GET", fb.String(), nil)
 	if err != nil {
 		fb.setWatching(false)
 		return err

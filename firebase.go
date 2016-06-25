@@ -54,6 +54,36 @@ type Firebase struct {
 	stopWatching chan struct{}
 }
 
+// New creates a new Firebase reference,
+// if client is nil, http.DefaultClient is used.
+func New(url string, client *http.Client) *Firebase {
+
+	if client == nil {
+		var tr *http.Transport
+		tr = &http.Transport{
+			DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
+			Dial: func(network, address string) (net.Conn, error) {
+				start := time.Now()
+				c, err := net.DialTimeout(network, address, TimeoutDuration)
+				tr.ResponseHeaderTimeout = TimeoutDuration - time.Since(start)
+				return c, err
+			},
+		}
+
+		client = &http.Client{
+			Transport:     tr,
+			CheckRedirect: redirectPreserveHeaders,
+		}
+	}
+
+	return &Firebase{
+		url:          sanitizeURL(url),
+		params:       _url.Values{},
+		client:       client,
+		stopWatching: make(chan struct{}),
+	}
+}
+
 // Auth sets the custom Firebase token used to authenticate to Firebase.
 func (fb *Firebase) Auth(token string) {
 	fb.params.Set(authParam, token)
@@ -122,68 +152,6 @@ func (fb *Firebase) Value(v interface{}) error {
 	return json.Unmarshal(bytes, v)
 }
 
-func sanitizeURL(url string) string {
-	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
-		url = "https://" + url
-	}
-
-	if strings.HasSuffix(url, "/") {
-		url = url[:len(url)-1]
-	}
-
-	return url
-}
-
-// Preserve headers on redirect.
-//
-// Reference https://github.com/golang/go/issues/4800
-func redirectPreserveHeaders(req *http.Request, via []*http.Request) error {
-	if len(via) == 0 {
-		// No redirects
-		return nil
-	}
-
-	if len(via) > defaultRedirectLimit {
-		return fmt.Errorf("%d consecutive requests(redirects)", len(via))
-	}
-
-	// mutate the subsequent redirect requests with the first Header
-	for key, val := range via[0].Header {
-		req.Header[key] = val
-	}
-	return nil
-}
-
-// New creates a new Firebase reference,
-// if client is nil, http.DefaultClient is used.
-func New(url string, client *http.Client) *Firebase {
-
-	if client == nil {
-		var tr *http.Transport
-		tr = &http.Transport{
-			DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
-			Dial: func(network, address string) (net.Conn, error) {
-				start := time.Now()
-				c, err := net.DialTimeout(network, address, TimeoutDuration)
-				tr.ResponseHeaderTimeout = TimeoutDuration - time.Since(start)
-				return c, err
-			},
-		}
-
-		client = &http.Client{
-			Transport:     tr,
-			CheckRedirect: redirectPreserveHeaders,
-		}
-	}
-
-	return &Firebase{
-		url:          sanitizeURL(url),
-		params:       _url.Values{},
-		client:       client,
-		stopWatching: make(chan struct{}),
-	}
-}
-
 // String returns the string representation of the
 // Firebase reference.
 func (fb *Firebase) String() string {
@@ -219,12 +187,40 @@ func (fb *Firebase) copy() *Firebase {
 	return c
 }
 
-func (fb *Firebase) makeRequest(method string, body []byte) (*http.Request, error) {
-	return http.NewRequest(method, fb.String(), bytes.NewReader(body))
+func sanitizeURL(url string) string {
+	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
+		url = "https://" + url
+	}
+
+	if strings.HasSuffix(url, "/") {
+		url = url[:len(url)-1]
+	}
+
+	return url
+}
+
+// Preserve headers on redirect.
+//
+// Reference https://github.com/golang/go/issues/4800
+func redirectPreserveHeaders(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		// No redirects
+		return nil
+	}
+
+	if len(via) > defaultRedirectLimit {
+		return fmt.Errorf("%d consecutive requests(redirects)", len(via))
+	}
+
+	// mutate the subsequent redirect requests with the first Header
+	for key, val := range via[0].Header {
+		req.Header[key] = val
+	}
+	return nil
 }
 
 func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
-	req, err := fb.makeRequest(method, body)
+	req, err := http.NewRequest(method, fb.String(), bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
