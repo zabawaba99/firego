@@ -33,15 +33,15 @@ type ErrTimeout struct {
 // query parameter constants
 const (
 	authParam         = "auth"
-	formatParam       = "format"
 	shallowParam      = "shallow"
-	orderByParam      = "orderBy"
-	equalToParam      = "equalTo"
-	startAtParam      = "startAt"
-	endAtParam        = "endAt"
+	formatParam       = "format"
 	formatVal         = "export"
+	orderByParam      = "orderBy"
 	limitToFirstParam = "limitToFirst"
 	limitToLastParam  = "limitToLast"
+	startAtParam      = "startAt"
+	endAtParam        = "endAt"
+	equalToParam      = "equalTo"
 )
 
 // Firebase represents a location in the cloud.
