@@ -3,15 +3,17 @@ package firego
 import (
 	"bufio"
 	"encoding/json"
-	"log"
+	log "github.com/Sirupsen/logrus"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 // EventTypeError is the type that is set on an Event struct if an
 // error occurs while watching a Firebase reference.
 const EventTypeError = "event_error"
+const EventAuthError = "auth_revoked"
 
 // Event represents a notification received when watching a
 // firebase reference.
@@ -163,7 +165,26 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 				event.Data = data["data"]
 
 				// ship it
-				notifications <- event
+				
+				retry := 0
+                retrySend:
+    				select {
+    				case notifications <- event:
+    				default:
+    					if retry == 0 {
+
+    						log.Error("Firebase channel backed up. Sleeping  for fews  mins ..")
+    						// Wait 2 minutes
+    						// TODO make configurable
+    						time.Sleep(time.Minute * 2)
+
+    						retry = 1
+    						goto retrySend
+    					} else {
+    						log.Error("Firebase channel Stuck!. Exiting ..")
+    						panic("Waited too long for backlog to clear up")
+    					}
+    				}
 			case "keep-alive":
 				// received ping - nothing to do here
 			case "cancel":
@@ -179,6 +200,11 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 				// This event will be sent when the supplied auth parameter is no longer valid
 
 				// TODO: handle
+                notifications <- Event{
+                    Type: EventAuthError,
+                    Data: nil,
+                }
+                break scanning
 			case "rules_debug":
 				log.Printf("Rules-Debug: %s\n", txt)
 			}
