@@ -5,7 +5,6 @@ package firego
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -85,73 +84,6 @@ func New(url string, client *http.Client) *Firebase {
 	}
 }
 
-// Auth sets the custom Firebase token used to authenticate to Firebase.
-func (fb *Firebase) Auth(token string) {
-	fb.params.Set(authParam, token)
-}
-
-// Unauth removes the current token being used to authenticate to Firebase.
-func (fb *Firebase) Unauth() {
-	fb.params.Del(authParam)
-}
-
-// Push creates a reference to an auto-generated child location.
-func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
-	bytes, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err = fb.doRequest("POST", bytes)
-	if err != nil {
-		return nil, err
-	}
-	var m map[string]string
-	if err := json.Unmarshal(bytes, &m); err != nil {
-		return nil, err
-	}
-	return &Firebase{
-		url:    fb.url + "/" + m["name"],
-		client: fb.client,
-	}, err
-}
-
-// Remove the Firebase reference from the cloud.
-func (fb *Firebase) Remove() error {
-	_, err := fb.doRequest("DELETE", nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Set the value of the Firebase reference.
-func (fb *Firebase) Set(v interface{}) error {
-	bytes, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	_, err = fb.doRequest("PUT", bytes)
-	return err
-}
-
-// Update the specific child with the given value.
-func (fb *Firebase) Update(v interface{}) error {
-	bytes, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	_, err = fb.doRequest("PATCH", bytes)
-	return err
-}
-
-// Value gets the value of the Firebase reference.
-func (fb *Firebase) Value(v interface{}) error {
-	bytes, err := fb.doRequest("GET", nil)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(bytes, v)
-}
 
 // String returns the string representation of the
 // Firebase reference.
