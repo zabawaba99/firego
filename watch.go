@@ -185,7 +185,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 				// set the extra fields
 				event.Path = data["path"].(string)
 				event.Data = data["data"]
-				
+
 				// ship it
 				notifications <- event
 			case "keep-alive":
