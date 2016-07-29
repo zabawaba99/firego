@@ -126,3 +126,44 @@ func TestStopWatch(t *testing.T) {
 	_, ok := <-notifications
 	assert.False(t, ok, "notifications should be closed")
 }
+
+func TestWatchValue(t *testing.T) {
+	server := firetest.New()
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil)
+
+	notifications := make(chan Event)
+	err := fb.Watch(notifications)
+	assert.NoError(t, err)
+
+	l := map[string]interface{}{"name": "Yoda", "level": 42}
+	server.Set("/foo", l)
+
+	select {
+	case event, ok := <-notifications:
+		assert.True(t, ok)
+		assert.Equal(t, "put", event.Type)
+		assert.Equal(t, "/", event.Path)
+		assert.Nil(t, event.Data)
+	case <-time.After(250 * time.Millisecond):
+		require.FailNow(t, "did not receive a notification initial notification")
+	}
+
+	select {
+	case event, ok := <-notifications:
+		assert.True(t, ok)
+		var x struct {
+			Name  string `json:"name"`
+			Level int    `json:"level"`
+		}
+		path, err := event.Value(&x)
+		assert.NoError(t, err)
+		assert.Equal(t, "/foo", path)
+		assert.Equal(t, "Yoda", x.Name)
+		assert.Equal(t, 42, x.Level)
+	case <-time.After(250 * time.Millisecond):
+		require.FailNow(t, "did not receive a notification")
+	}
+}
