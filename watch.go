@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
