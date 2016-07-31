@@ -65,6 +65,29 @@ func (fb *Firebase) setWatching(v bool) {
 	fb.watchMtx.Unlock()
 }
 
+func readPayload(scanner *bufio.Reader, payload []string) error {
+	lineCount := 0
+	for {
+		line, err := scanner.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		line = strings.Trim(line, " \r\n")
+		if len(line) == 0 {
+			// empty line
+			if lineCount == len(payload) {
+				return nil // everything OK
+			} else {
+				return errors.New("Bad formated body")
+			}
+		}
+		if lineCount < len(payload) {
+			payload[lineCount] = line
+			lineCount++
+		}
+	}
+}
+
 // Watch listens for changes on a firebase instance and
 // passes over to the given chan.
 //
@@ -72,6 +95,7 @@ func (fb *Firebase) setWatching(v bool) {
 // second call to this function without a call to fb.StopWatching
 // will close the channel given and return nil immediately.
 func (fb *Firebase) Watch(notifications chan Event) error {
+
 	if fb.isWatching() {
 		close(notifications)
 		return nil
@@ -122,48 +146,26 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 			// 		data: {"path":"/","data":{"foo":"bar"}}
 
 			payload := make([]string, 2)
-			scanErr = func(payload []string) error {
-				lineCount := 0
-				for {
-					line, err := scanner.ReadString('\n')
-					if err != nil {
-						return err
-					}
-					line = strings.Trim(line, " \r\n")
-					if len(line) == 0 { // empty line
-						if lineCount == len(payload) {
-							return nil // everything OK
-						} else {
-							return errors.New("Bad formated body")
-						}
-					}
-					if lineCount < len(payload) {
-						payload[lineCount] = line
-						lineCount++
-					}
-				}
-			}(payload)
+			scanErr = readPayload(scanner, payload)
 			if scanErr != nil {
 				break scanning
 			}
 
 			var eventType string
-			if strings.HasPrefix(payload[0], "event:") {
-				eventType = strings.TrimPrefix(payload[0], "event:")
-				eventType = strings.Trim(eventType, " \r\n")
-			} else {
+			if !strings.HasPrefix(payload[0], "event:") {
 				scanErr = errors.New("First line does not start with event:")
 				break scanning
 			}
+			eventType = strings.TrimPrefix(payload[0], "event:")
+			eventType = strings.Trim(eventType, " \r\n")
 
 			var eventData string
-			if strings.HasPrefix(payload[1], "data:") {
-				eventData = strings.TrimPrefix(payload[1], "data:")
-				eventData = strings.Trim(eventData, " \r\n")
-			} else {
+			if !strings.HasPrefix(payload[1], "data:") {
 				scanErr = errors.New("Second line does not start with data:")
 				break scanning
 			}
+			eventData = strings.TrimPrefix(payload[1], "data:")
+			eventData = strings.Trim(eventData, " \r\n")
 
 			// create a base event
 			event := Event{
