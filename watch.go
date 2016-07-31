@@ -206,8 +206,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 
 				// TODO: handle
 			case "rules_debug":
-				txt, _ := ioutil.ReadAll(resp.Body)
-				log.Printf("Rules-Debug: %s\n", string(txt))
+				log.Printf("Rules-Debug: %s\n", eventData)
 			}
 		}
 
