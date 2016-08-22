@@ -49,6 +49,7 @@ type Firebase struct {
 	url    string
 	params _url.Values
 	client *http.Client
+	name   string
 
 	watchMtx     sync.Mutex
 	watching     bool
@@ -112,6 +113,7 @@ func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	return &Firebase{
 		url:    fb.url + "/" + m["name"],
 		client: fb.client,
+		name:   m["name"],
 	}, err
 }
 
