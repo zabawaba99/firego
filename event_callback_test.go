@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zabawaba99/firego/firetest"
 	"github.com/zabawaba99/firego/sync"
-	"github.com/zabawaba99/firetest"
 )
 
 type testEvent struct {

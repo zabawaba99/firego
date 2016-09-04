@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zabawaba99/firetest"
+	"github.com/zabawaba99/firego/firetest"
 )
 
 const URL = "https://somefirebaseapp.firebaseIO.com"
