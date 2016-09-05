@@ -2,11 +2,14 @@ package sync
 
 import (
 	"strings"
+	"sync"
 )
 
 // Database is a local representation of a Firebase database.
 type Database struct {
 	root *Node
+
+	mtx sync.RWMutex
 }
 
 // NewDB creates a new instance of a Database.
@@ -20,6 +23,9 @@ func NewDB() *Database {
 
 // Add puts a Node into the database.
 func (d *Database) Add(path string, n *Node) {
+	d.mtx.Lock()
+	defer d.mtx.Unlock()
+
 	if path == "" {
 		d.root = n
 		return
@@ -49,6 +55,9 @@ func (d *Database) Add(path string, n *Node) {
 
 // Update merges the current node with the given node.
 func (d *Database) Update(path string, n *Node) {
+	d.mtx.Lock()
+	defer d.mtx.Unlock()
+
 	current := d.root
 	rabbitHole := strings.Split(path, "/")
 
@@ -77,6 +86,9 @@ func (d *Database) Update(path string, n *Node) {
 
 // Del removes the node at the given path.
 func (d *Database) Del(path string) {
+	d.mtx.Lock()
+	defer d.mtx.Unlock()
+
 	if path == "" {
 		d.root = &Node{
 			Children: map[string]*Node{},
@@ -115,6 +127,9 @@ func (d *Database) Del(path string) {
 
 // Get fetches a node at a given path.
 func (d *Database) Get(path string) *Node {
+	d.mtx.RLock()
+	defer d.mtx.RUnlock()
+
 	current := d.root
 	if path == "" {
 		return current
