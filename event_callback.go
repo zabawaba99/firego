@@ -16,6 +16,10 @@ type ChildEventFunc func(snapshot DataSnapshot, previousChildKey string)
 
 // ChildAdded listens on the firebase instance and executes the callback
 // for every child that is added.
+//
+// You cannot set the same function twice on a Firebase reference, if you do
+// the first function will be overridden and you will not be able to close the
+// connection.
 func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 	return fb.addEventFunc(fn, fn.childAdded)
 }
@@ -65,6 +69,10 @@ func (fn ChildEventFunc) childAdded(notifications chan Event) {
 
 // ChildChanged listens on the firebase instance and executes the callback
 // for every child that is changed.
+//
+// You cannot set the same function twice on a Firebase reference, if you do
+// the first function will be overridden and you will not be able to close the
+// connection.
 func (fb *Firebase) ChildChanged(fn ChildEventFunc) error {
 	return fb.addEventFunc(fn, fn.childChanged)
 }
@@ -122,6 +130,10 @@ func (fn ChildEventFunc) childChanged(notifications chan Event) {
 
 // ChildRemoved listens on the firebase instance and executes the callback
 // for every child that is deleted.
+//
+// You cannot set the same function twice on a Firebase reference, if you do
+// the first function will be overridden and you will not be able to close the
+// connection.
 func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 	return fb.addEventFunc(fn, fn.childRemoved)
 }
