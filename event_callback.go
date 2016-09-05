@@ -17,10 +17,10 @@ type ChildEventFunc func(snapshot DataSnapshot, previousChildKey string)
 // ChildAdded listens on the firebase instance and executes the callback
 // for every child that is added.
 func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
-	return fb.addEventFunc(fn, childAdded)
+	return fb.addEventFunc(fn, fn.childAdded)
 }
 
-func childAdded(fn ChildEventFunc, notifications chan Event) {
+func (fn ChildEventFunc) childAdded(notifications chan Event) {
 	var pk string
 	db := sync.NewDB()
 
@@ -80,10 +80,10 @@ func childAdded(fn ChildEventFunc, notifications chan Event) {
 // ChildChanged listens on the firebase instance and executes the callback
 // for every child that is changed.
 func (fb *Firebase) ChildChanged(fn ChildEventFunc) error {
-	return fb.addEventFunc(fn, childChanged)
+	return fb.addEventFunc(fn, fn.childChanged)
 }
 
-func childChanged(fn ChildEventFunc, notifications chan Event) {
+func (fn ChildEventFunc) childChanged(notifications chan Event) {
 	first, ok := <-notifications
 	if !ok {
 		return
@@ -145,10 +145,10 @@ func childChanged(fn ChildEventFunc, notifications chan Event) {
 // ChildRemoved listens on the firebase instance and executes the callback
 // for every child that is deleted.
 func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
-	return fb.addEventFunc(fn, childRemoved)
+	return fb.addEventFunc(fn, fn.childRemoved)
 }
 
-func childRemoved(fn ChildEventFunc, notifications chan Event) {
+func (fn ChildEventFunc) childRemoved(notifications chan Event) {
 	first, ok := <-notifications
 	if !ok {
 		return
@@ -201,7 +201,7 @@ func childRemoved(fn ChildEventFunc, notifications chan Event) {
 	}
 }
 
-func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE func(ChildEventFunc, chan Event)) error {
+func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE func(chan Event)) error {
 	fb.eventMtx.Lock()
 	defer fb.eventMtx.Unlock()
 
@@ -218,7 +218,7 @@ func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE func(ChildEventFun
 		return err
 	}
 
-	go handleSSE(fn, notifications)
+	go handleSSE(notifications)
 	return nil
 }
 

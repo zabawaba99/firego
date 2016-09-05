@@ -73,7 +73,7 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 }
 
 // Objectify
-func (n *Node) Objectify() interface{} {
+func (n Node) Objectify() interface{} {
 	if n.isNil() {
 		return nil
 	}
