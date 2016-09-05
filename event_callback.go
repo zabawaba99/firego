@@ -21,7 +21,7 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 }
 
 func (fn ChildEventFunc) childAdded(notifications chan Event) {
-	var pk string
+	var prevKey string
 	db := sync.NewDB()
 
 	orderAndSend := func(data map[string]interface{}) {
@@ -39,8 +39,8 @@ func (fn ChildEventFunc) childAdded(notifications chan Event) {
 			v := data[k]
 			node := sync.NewNode(k, v)
 			db.Add(k, node)
-			fn(newSnapshot(node), pk)
-			pk = k
+			fn(newSnapshot(node), prevKey)
+			prevKey = k
 		}
 	}
 
@@ -72,8 +72,8 @@ func (fn ChildEventFunc) childAdded(notifications chan Event) {
 		node := sync.NewNode(child, event.Data)
 		db.Add(strings.Trim(child, "/"), node)
 
-		fn(newSnapshot(node), pk)
-		pk = child
+		fn(newSnapshot(node), prevKey)
+		prevKey = child
 	}
 }
 
@@ -92,7 +92,7 @@ func (fn ChildEventFunc) childChanged(notifications chan Event) {
 	db := sync.NewDB()
 	db.Add("", sync.NewNode("", first.Data))
 
-	var pk string
+	var prevKey string
 	for event := range notifications {
 		path := strings.Trim(event.Path, "/")
 		if event.Data == nil {
@@ -130,15 +130,15 @@ func (fn ChildEventFunc) childChanged(notifications chan Event) {
 				}
 
 				db.Update(newPath, node)
-				fn(newSnapshot(node), pk)
-				pk = k
+				fn(newSnapshot(node), prevKey)
+				prevKey = k
 			}
 			continue
 		}
 
 		db.Update(path, node)
-		fn(newSnapshot(db.Get(child)), pk)
-		pk = child
+		fn(newSnapshot(db.Get(child)), prevKey)
+		prevKey = child
 	}
 }
 
