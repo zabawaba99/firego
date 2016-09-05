@@ -69,9 +69,9 @@ func (db *notifyDB) get(path string) *sync.Node {
 	return db.intDB.Get(path)
 }
 
-func (tree *notifyDB) notify(e event) {
-	tree.watchersMtx.RLock()
-	for path, listeners := range tree.watchers {
+func (db *notifyDB) notify(e event) {
+	db.watchersMtx.RLock()
+	for path, listeners := range db.watchers {
 		if !strings.HasPrefix(e.Data.Path, path) {
 			continue
 		}
@@ -89,13 +89,13 @@ func (tree *notifyDB) notify(e event) {
 			}
 		}
 	}
-	tree.watchersMtx.RUnlock()
+	db.watchersMtx.RUnlock()
 }
 
-func (tree *notifyDB) stopWatching(path string, c chan event) {
-	tree.watchersMtx.Lock()
+func (db *notifyDB) stopWatching(path string, c chan event) {
+	db.watchersMtx.Lock()
 	index := -1
-	for i, ch := range tree.watchers[path] {
+	for i, ch := range db.watchers[path] {
 		if ch == c {
 			index = i
 			break
@@ -103,19 +103,19 @@ func (tree *notifyDB) stopWatching(path string, c chan event) {
 	}
 
 	if index > -1 {
-		a := tree.watchers[path]
-		tree.watchers[path] = append(a[:index], a[index+1:]...)
+		a := db.watchers[path]
+		db.watchers[path] = append(a[:index], a[index+1:]...)
 		close(c)
 	}
-	tree.watchersMtx.Unlock()
+	db.watchersMtx.Unlock()
 }
 
-func (tree *notifyDB) watch(path string) chan event {
+func (db *notifyDB) watch(path string) chan event {
 	c := make(chan event)
 
-	tree.watchersMtx.Lock()
-	tree.watchers[path] = append(tree.watchers[path], c)
-	tree.watchersMtx.Unlock()
+	db.watchersMtx.Lock()
+	db.watchers[path] = append(db.watchers[path], c)
+	db.watchersMtx.Unlock()
 
 	return c
 }

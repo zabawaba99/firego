@@ -9,13 +9,19 @@ import (
 )
 
 const (
-	EventTypePut         = "put"
-	EventTypePatch       = "patch"
+	// EventTypePut is the event type sent when new data is inserted to the
+	// Firebase instance.
+	EventTypePut = "put"
+	// EventTypePatch is the event type sent when data at the Firebase instance is
+	// updated.
+	EventTypePatch = "patch"
+	// EventTypeError is the event type sent when an unknown error is encountered.
+	EventTypeError = "event_error"
+
 	eventTypeKeepAlive   = "keep-alive"
 	eventTypeCancel      = "cancel"
 	eventTypeAuthRevoked = "auth_revoked"
 	eventTypeRulesDebug  = "rules_debug"
-	EventTypeError       = "event_error"
 )
 
 // Event represents a notification received when watching a

@@ -20,6 +20,7 @@ type Node struct {
 	sliceKids bool
 }
 
+// NewNode converts the given data into a node.
 func NewNode(key string, data interface{}) *Node {
 	n := &Node{
 		Key:      key,
@@ -68,11 +69,15 @@ func NewNode(key string, data interface{}) *Node {
 	return n
 }
 
+// MarshalJSON turns the node object into JSON bytes.
 func (n *Node) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.Objectify())
 }
 
-// Objectify
+// Objectify turns the node and all its children into a go type.
+// If a node was created from a slice initially, a slice will be return.
+// If a node has child nodes, a map will be returned.
+// Otherwise, a primitive type will be returned.
 func (n Node) Objectify() interface{} {
 	if n.isNil() {
 		return nil
