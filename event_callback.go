@@ -24,26 +24,6 @@ func (fn ChildEventFunc) childAdded(notifications chan Event) {
 	var prevKey string
 	db := sync.NewDB()
 
-	orderAndSend := func(data map[string]interface{}) {
-		// we've got children so send an event per child
-		orderedKeys := make([]string, len(data))
-		var i int
-		for k := range data {
-			orderedKeys[i] = k
-			i++
-		}
-
-		sort.Strings(orderedKeys)
-
-		for _, k := range orderedKeys {
-			v := data[k]
-			node := sync.NewNode(k, v)
-			db.Add(k, node)
-			fn(newSnapshot(node), prevKey)
-			prevKey = k
-		}
-	}
-
 	for event := range notifications {
 		if event.Type != EventTypePut {
 			continue
@@ -64,7 +44,13 @@ func (fn ChildEventFunc) childAdded(notifications chan Event) {
 		if child == "" && ok {
 			// if we were given a map at the root then we have
 			// to send an event per child
-			orderAndSend(m)
+			for _, k := range sortedKeys(m) {
+				v := m[k]
+				node := sync.NewNode(k, v)
+				db.Add(k, node)
+				fn(newSnapshot(node), prevKey)
+				prevKey = k
+			}
 			continue
 		}
 
@@ -112,15 +98,7 @@ func (fn ChildEventFunc) childChanged(notifications chan Event) {
 
 		if m, ok := event.Data.(map[string]interface{}); child == "" && ok {
 			// we've got children so send an event per child
-			orderedKeys := make([]string, len(m))
-			var i int
-			for k := range m {
-				orderedKeys[i] = k
-				i++
-			}
-
-			sort.Strings(orderedKeys)
-			for _, k := range orderedKeys {
+			for _, k := range sortedKeys(m) {
 				v := m[k]
 				node := sync.NewNode(k, v)
 				newPath := strings.TrimPrefix(child+"/"+k, "/")
@@ -236,4 +214,16 @@ func (fb *Firebase) RemoveEventFunc(fn ChildEventFunc) {
 
 	delete(fb.eventFuncs, key)
 	close(stop)
+}
+
+func sortedKeys(m map[string]interface{}) []string {
+	orderedKeys := make([]string, len(m))
+	var i int
+	for k := range m {
+		orderedKeys[i] = k
+		i++
+	}
+
+	sort.Strings(orderedKeys)
+	return orderedKeys
 }
