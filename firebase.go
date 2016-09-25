@@ -114,8 +114,11 @@ func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 		return nil, err
 	}
 	return &Firebase{
-		url:    fb.url + "/" + m["name"],
-		client: fb.client,
+		url:          fb.url + "/" + m["name"],
+		params:       _url.Values{},
+		client:       fb.client,
+		stopWatching: make(chan struct{}),
+		eventFuncs:   map[string]chan struct{}{},
 	}, err
 }
 

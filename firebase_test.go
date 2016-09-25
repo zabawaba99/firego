@@ -110,6 +110,11 @@ func TestPush(t *testing.T) {
 	path := strings.TrimPrefix(childRef.String(), server.URL+"/")
 	v := server.Get(path)
 	assert.Equal(t, payload, v)
+
+	childRef.Auth(server.Secret)
+	var m map[string]interface{}
+	require.NoError(t, childRef.Value(&m))
+	assert.Equal(t, payload, m, childRef.String())
 }
 
 func TestRemove(t *testing.T) {
