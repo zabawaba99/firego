@@ -50,6 +50,9 @@ type Firebase struct {
 	params _url.Values
 	client *http.Client
 
+	eventMtx   sync.Mutex
+	eventFuncs map[string]chan struct{}
+
 	watchMtx     sync.Mutex
 	watching     bool
 	stopWatching chan struct{}
@@ -82,6 +85,7 @@ func New(url string, client *http.Client) *Firebase {
 		params:       _url.Values{},
 		client:       client,
 		stopWatching: make(chan struct{}),
+		eventFuncs:   map[string]chan struct{}{},
 	}
 }
 
@@ -178,6 +182,7 @@ func (fb *Firebase) copy() *Firebase {
 		params:       _url.Values{},
 		client:       fb.client,
 		stopWatching: make(chan struct{}),
+		eventFuncs:   map[string]chan struct{}{},
 	}
 
 	// making sure to manually copy the map items into a new

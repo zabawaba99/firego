@@ -6,12 +6,23 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 )
 
-// EventTypeError is the type that is set on an Event struct if an
-// error occurs while watching a Firebase reference.
-const EventTypeError = "event_error"
+const (
+	// EventTypePut is the event type sent when new data is inserted to the
+	// Firebase instance.
+	EventTypePut = "put"
+	// EventTypePatch is the event type sent when data at the Firebase instance is
+	// updated.
+	EventTypePatch = "patch"
+	// EventTypeError is the event type sent when an unknown error is encountered.
+	EventTypeError = "event_error"
+
+	eventTypeKeepAlive   = "keep-alive"
+	eventTypeCancel      = "cancel"
+	eventTypeAuthRevoked = "auth_revoked"
+	eventTypeRulesDebug  = "rules_debug"
+)
 
 // Event represents a notification received when watching a
 // firebase reference.
@@ -61,11 +72,44 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	// set watching flag
 	fb.setWatching(true)
 
+	stop := make(chan struct{})
+	events, err := fb.watch(stop)
+	if err != nil {
+		return err
+	}
+
+	var closedManually bool
+
+	// monitor the stopWatching channel
+	// if we're told to stop, close the response Body
+	go func() {
+		<-fb.stopWatching
+
+		closedManually = true
+		close(stop)
+	}()
+
+	go func() {
+		for event := range events {
+			if event.Type == EventTypeError && closedManually {
+				break
+			}
+
+			notifications <- event
+		}
+
+		close(notifications)
+	}()
+
+	return nil
+}
+
+func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 	// build SSE request
 	req, err := http.NewRequest("GET", fb.String(), nil)
 	if err != nil {
 		fb.setWatching(false)
-		return err
+		return nil, err
 	}
 	req.Header.Add("Accept", "text/event-stream")
 
@@ -73,30 +117,23 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	resp, err := fb.client.Do(req)
 	if err != nil {
 		fb.setWatching(false)
-		return err
+		return nil, err
 	}
+
+	notifications := make(chan Event)
+
+	go func() {
+		<-stop
+		defer resp.Body.Close()
+	}()
 
 	// start parsing response body
 	go func() {
+
 		// build scanner for response body
 		scanner := bufio.NewReader(resp.Body)
-		var (
-			scanErr        error
-			closedManually bool
-			mtx            sync.Mutex
-		)
+		var scanErr error
 
-		// monitor the stopWatching channel
-		// if we're told to stop, close the response Body
-		go func() {
-			<-fb.stopWatching
-
-			mtx.Lock()
-			closedManually = true
-			mtx.Unlock()
-
-			resp.Body.Close()
-		}()
 	scanning:
 		for scanErr == nil {
 			// split event string
@@ -149,9 +186,8 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 
 			// should be reacting differently based off the type of event
 			switch event.Type {
-			case "put", "patch": // we've got extra data we've got to parse
-
-				// the extra data is in json format
+			case EventTypePut, EventTypePatch:
+				// we've got extra data we've got to parse
 				var data map[string]interface{}
 				if err := json.Unmarshal([]byte(strings.Replace(parts[1], "data: ", "", 1)), &data); err != nil {
 					scanErr = err
@@ -164,9 +200,9 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 
 				// ship it
 				notifications <- event
-			case "keep-alive":
+			case eventTypeKeepAlive:
 				// received ping - nothing to do here
-			case "cancel":
+			case eventTypeCancel:
 				// The data for this event is null
 				// This event will be sent if the Security and Firebase Rules
 				// cause a read at the requested location to no longer be allowed
@@ -174,31 +210,25 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 				// send the cancel event
 				notifications <- event
 				break scanning
-			case "auth_revoked":
+			case eventTypeAuthRevoked:
 				// The data for this event is a string indicating that a the credential has expired
 				// This event will be sent when the supplied auth parameter is no longer valid
 
 				// TODO: handle
-			case "rules_debug":
+			case eventTypeRulesDebug:
 				log.Printf("Rules-Debug: %s\n", txt)
 			}
 		}
 
-		// check error type
-		mtx.Lock()
-		closed := closedManually
-		mtx.Unlock()
-		if !closed && scanErr != nil {
+		if scanErr != nil {
 			notifications <- Event{
 				Type: EventTypeError,
 				Data: scanErr,
 			}
 		}
 
-		// call stop watching to reset state and cleanup routines
-		fb.StopWatching()
+		// cleanup routines
 		close(notifications)
-
 	}()
-	return nil
+	return notifications, nil
 }
