@@ -113,13 +113,9 @@ func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	if err := json.Unmarshal(bytes, &m); err != nil {
 		return nil, err
 	}
-	return &Firebase{
-		url:          fb.url + "/" + m["name"],
-		params:       _url.Values{},
-		client:       fb.client,
-		stopWatching: make(chan struct{}),
-		eventFuncs:   map[string]chan struct{}{},
-	}, err
+	newRef := fb.copy()
+	newRef.url = fb.url + "/" + m["name"]
+	return newRef, err
 }
 
 // Remove the Firebase reference from the cloud.
