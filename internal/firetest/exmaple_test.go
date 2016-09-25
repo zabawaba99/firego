@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/zabawaba99/firego/firetest"
+	"github.com/zabawaba99/firego/internal/firetest"
 )
 
 func Example() {

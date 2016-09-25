@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zabawaba99/firego/firetest"
+	"github.com/zabawaba99/firego/internal/firetest"
 	"github.com/zabawaba99/firego/sync"
 )
 
