@@ -152,6 +152,14 @@ func redirectPreserveHeaders(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
+func (fb *Firebase) Value(v interface{}) error {
+	bytes, err := fb.doRequest("GET", nil)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bytes, v)
+}
+
 func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 	req, err := http.NewRequest(method, fb.String(), bytes.NewReader(body))
 	if err != nil {
