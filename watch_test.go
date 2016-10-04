@@ -126,7 +126,6 @@ func TestWatchAuthRevoked(t *testing.T) {
 		notifications = make(chan Event)
 		fb            = New(server.URL, nil)
 	)
-	defer server.Close()
 
 	if err := fb.Watch(notifications); err != nil {
 		t.Fatal(err)
