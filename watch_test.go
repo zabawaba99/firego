@@ -1,6 +1,7 @@
 package firego
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -104,6 +105,38 @@ func TestWatchError(t *testing.T) {
 	assert.Empty(t, event.Path, "event path is not empty")
 	assert.NotNil(t, event.Data, "event data is nil")
 	assert.Implements(t, new(error), event.Data)
+}
+
+func TestWatchAuthRevoked(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		require.True(t, ok, "streaming unsupported")
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		flusher.Flush()
+		fmt.Fprintf(w, "event: %s\ndata: %q\n\n", EventTypeAuthRevoked, "token expired")
+	}))
+	defer server.Close()
+
+	var (
+		notifications = make(chan Event)
+		fb            = New(server.URL, nil)
+	)
+	defer server.Close()
+
+	if err := fb.Watch(notifications); err != nil {
+		t.Fatal(err)
+	}
+
+	event, ok := <-notifications
+	require.True(t, ok, "notifications closed")
+	assert.Equal(t, EventTypeAuthRevoked, event.Type, "event type doesn't match")
+	assert.Empty(t, event.Path, "event path is not empty")
+	assert.Equal(t, event.Data, `"token expired"`, "event data does not match")
 }
 
 func TestStopWatch(t *testing.T) {
