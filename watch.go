@@ -153,49 +153,33 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 			// 		event: put
 			// 		data: {"path":"/","data":{"foo":"bar"}}
 
-			var evt []byte
-			var dat []byte
-			isPrefix := true
-			var result []byte
+			var evt string
+			var dat string
 
-			// For possible results larger than 64 * 1024 bytes (MaxTokenSize)
-			// we need bufio#ReadLine()
-			// 1. step: scan for the 'event:' part. ReadLine() oes not return the \n
-			// so we have to add it to our result buffer.
-			evt, isPrefix, scanErr = scanner.ReadLine()
+			// scan for 'event:'
+			evt, scanErr = scanner.ReadString('\n')
 			if scanErr != nil {
 				break scanning
 			}
-			result = append(result, evt...)
-			result = append(result, '\n')
+			evt = strings.TrimSuffix(evt, "\n")
 
-			// 2. step: scan for the 'data:' part. Firebase returns just one 'data:'
-			// part, but the value can be very large. If we exceed a certain length
-			// isPrefix will be true until all data is read.
-			for {
-				dat, isPrefix, scanErr = scanner.ReadLine()
-				if scanErr != nil {
-					break scanning
-				}
-				result = append(result, dat...)
-				if !isPrefix {
-					break
-				}
-			}
-			// Again we add the \n
-			result = append(result, '\n')
-			_, _, scanErr = scanner.ReadLine()
+			// scan for 'data:'
+			dat, scanErr = scanner.ReadString('\n')
 			if scanErr != nil {
 				break scanning
 			}
+			dat = strings.TrimSuffix(dat, "\n")
 
-			txt := string(result)
-			parts := strings.Split(txt, "\n")
+			// strip off last '\n'
+			_, scanErr = scanner.ReadString('\n')
+			if scanErr != nil {
+				break scanning
+			}
 
 			// create a base event
 			event := Event{
-				Type:    strings.Replace(parts[0], "event: ", "", 1),
-				rawData: strings.Replace(parts[1], "data: ", "", 1),
+				Type:    strings.Replace(evt, "event: ", "", 1),
+				rawData: strings.Replace(dat, "data: ", "", 1),
 			}
 
 			// should be reacting differently based off the type of event
@@ -203,7 +187,7 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 			case EventTypePut, EventTypePatch:
 				// we've got extra data we've got to parse
 				var data map[string]interface{}
-				if err := json.Unmarshal([]byte(strings.Replace(parts[1], "data: ", "", 1)), &data); err != nil {
+				if err := json.Unmarshal([]byte(strings.Replace(dat, "data: ", "", 1)), &data); err != nil {
 					scanErr = err
 					break scanning
 				}
@@ -227,11 +211,11 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 			case EventTypeAuthRevoked:
 				// The data for this event is a string indicating that a the credential has expired
 				// This event will be sent when the supplied auth parameter is no longer valid
-				event.Data = strings.Replace(parts[1], "data: ", "", 1)
+				event.Data = strings.Replace(dat, "data: ", "", 1)
 				notifications <- event
 				break scanning
 			case eventTypeRulesDebug:
-				log.Printf("Rules-Debug: %s\n", txt)
+				log.Printf("Rules-Debug: %s\n%s\n", evt, dat)
 			}
 		}
 
