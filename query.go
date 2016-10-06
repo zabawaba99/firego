@@ -76,7 +76,7 @@ func (fb *Firebase) EqualTo(value string) *Firebase {
 }
 
 func escapeString(s string) string {
-	_, err := strconv.ParseInt(s, 10, 64)
+	_, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return `"` + strings.Trim(s, `"`) + `"`
 	}
