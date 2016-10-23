@@ -35,6 +35,17 @@ type Event struct {
 	Path string
 	// Data that changed
 	Data interface{}
+
+	rawData string
+}
+
+// Value converts the raw payload of the event into the given interface.
+func (e Event) Value(v interface{}) error {
+	var tmp struct {
+		Data interface{} `json:"data"`
+	}
+	tmp.Data = &v
+	return json.Unmarshal([]byte(e.rawData), &tmp)
 }
 
 // StopWatching stops tears down all connections that are watching.
@@ -183,7 +194,8 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 
 			// create a base event
 			event := Event{
-				Type: strings.Replace(parts[0], "event: ", "", 1),
+				Type:    strings.Replace(parts[0], "event: ", "", 1),
+				rawData: strings.Replace(parts[1], "data: ", "", 1),
 			}
 
 			// should be reacting differently based off the type of event

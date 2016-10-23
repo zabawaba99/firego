@@ -46,6 +46,9 @@ func TestWatch(t *testing.T) {
 		assert.True(t, ok)
 		assert.Equal(t, "/foo", event.Path)
 		assert.EqualValues(t, l, event.Data)
+		var v string
+		assert.NoError(t, event.Value(&v))
+		assert.EqualValues(t, l, v)
 	case <-time.After(250 * time.Millisecond):
 		require.FailNow(t, "did not receive a notification")
 	}
