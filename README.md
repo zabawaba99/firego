@@ -8,7 +8,7 @@ A Firebase client written in Go
 ## Installation
 
 ```bash
-go get -u github.com/zabawaba99/firego
+go get -u gopkg.in/zabawaba99/firego.v1
 ```
 
 ## Usage
@@ -16,7 +16,7 @@ go get -u github.com/zabawaba99/firego
 Import firego
 
 ```go
-import "github.com/zabawaba99/firego"
+import "gopkg.in/zabawaba99/firego.v1"
 ```
 
 Create a new firego reference
@@ -132,7 +132,7 @@ for event := range notifications {
 fmt.Printf("Notifications have stopped")
 ```
 
-Check the [GoDocs](http://godoc.org/github.com/zabawaba99/firego) or
+Check the [GoDocs](http://godoc.org/gopkg.in/zabawaba99/firego.v1) or
 [Firebase Documentation](https://www.firebase.com/docs/rest/) for more details
 
 ## Running Tests
