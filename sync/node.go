@@ -6,12 +6,14 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // Node represents an object linked in Database. This object
 // should not be created by hand, use NewNode when creating
 // a new instance of Node.
 type Node struct {
+	mtx      sync.RWMutex
 	Key      string
 	Value    interface{}
 	Children map[string]*Node
@@ -23,9 +25,12 @@ type Node struct {
 // NewNode converts the given data into a node.
 func NewNode(key string, data interface{}) *Node {
 	n := &Node{
-		Key:      key,
-		Children: map[string]*Node{},
+		Key: key,
 	}
+
+	n.mtx.Lock()
+	n.Children = map[string]*Node{}
+	n.mtx.Unlock()
 
 	if data == nil {
 		return n
@@ -78,7 +83,10 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 // If a node was created from a slice initially, a slice will be return.
 // If a node has child nodes, a map will be returned.
 // Otherwise, a primitive type will be returned.
-func (n Node) Objectify() interface{} {
+func (n *Node) Objectify() interface{} {
+	n.mtx.RLock()
+	defer n.mtx.RUnlock()
+
 	if n.isNil() {
 		return nil
 	}
@@ -111,6 +119,9 @@ func (n Node) Objectify() interface{} {
 // The relative path can either be a simple child key (e.g. 'fred') or a deeper
 // slash-separated path (e.g. 'fred/name/first').
 func (n *Node) Child(name string) (*Node, bool) {
+	n.mtx.RLock()
+	defer n.mtx.RUnlock()
+
 	name = strings.Trim(name, "/")
 	rabbitHole := strings.Split(name, "/")
 
@@ -128,10 +139,16 @@ func (n *Node) Child(name string) (*Node, bool) {
 }
 
 func (n *Node) isNil() bool {
+	n.mtx.RLock()
+	defer n.mtx.RUnlock()
+
 	return n.Value == nil && len(n.Children) == 0
 }
 
 func (n *Node) merge(newNode *Node) {
+	n.mtx.Lock()
+	defer n.mtx.Unlock()
+
 	for k, v := range newNode.Children {
 		n.Children[k] = v
 	}
@@ -139,6 +156,9 @@ func (n *Node) merge(newNode *Node) {
 }
 
 func (n *Node) prune() *Node {
+	n.mtx.Lock()
+	defer n.mtx.Unlock()
+
 	if len(n.Children) > 0 || n.Value != nil {
 		return nil
 	}

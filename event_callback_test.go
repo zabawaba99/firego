@@ -53,48 +53,71 @@ func TestChildAdded(t *testing.T) {
 	server.Set("something", true)
 	server.Set("AAA", "foo")
 
+	// use this to sync up between different events
+	allNotifications, addNotifications := make(chan Event), make(chan Event)
+	err := fb.Watch(allNotifications)
+	require.NoError(t, err)
+	readNotification(t, allNotifications)
+
 	var results []testEvent
 	var mtx syncc.Mutex
 	fn := func(snapshot DataSnapshot, previousChildKey string) {
 		mtx.Lock()
 		results = append(results, testEvent{snapshot, previousChildKey})
+		addNotifications <- Event{Path: snapshot.Key}
 		mtx.Unlock()
 	}
-	err := fb.ChildAdded(fn)
+	err = fb.ChildAdded(fn)
 	require.NoError(t, err)
+
+	// read the two events that are already there
+	readNotification(t, addNotifications)
+	readNotification(t, addNotifications)
 
 	// should get regular addition events
 	err = fb.Child("foo").Set(2)
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	readNotification(t, addNotifications)
 
 	err = fb.Set(map[string]string{"lala": "faa", "alal": "aaf"})
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	// read the two events we should have gotten
+	readNotification(t, addNotifications)
+	readNotification(t, addNotifications)
 
 	err = fb.Child("bar").Set(map[string]string{"hi": "mom"})
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	readNotification(t, addNotifications)
 
 	fbChild, err := fb.Push("gaga oh la la")
 	require.NoError(t, err)
 	pushKey := strings.TrimPrefix(fbChild.url, fb.url+"/")
+	readNotification(t, allNotifications)
+	readNotification(t, addNotifications)
 
 	// should not get updates
 	err = fb.Child("foo").Set(false)
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
 
 	// or deletes
 	err = fb.Child("bar").Remove()
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
 
 	// should get a notification after adding a deleted field
 	err = fb.Child("bar").Set("something-else")
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	readNotification(t, addNotifications)
 
 	// should not get notifications for addition to a child not
 	err = fb.Child("bar/child").Set(true)
 	require.NoError(t, err)
-
-	// wait for all notifications to come down
-	time.Sleep(time.Millisecond)
+	readNotification(t, allNotifications)
 
 	expected := []testEvent{
 		{newSnapshot(sync.NewNode("AAA", "foo")), ""},
@@ -134,44 +157,60 @@ func TestChildChanged(t *testing.T) {
 	server.Set("alal", "3333")
 	server.Set("bar", 12123123123)
 
+	// use this to sync up between different events
+	allNotifications, changedNotifications := make(chan Event), make(chan Event)
+	err := fb.Watch(allNotifications)
+	require.NoError(t, err)
+	readNotification(t, allNotifications)
+
 	var results []testEvent
 	var mtx syncc.Mutex
 	fn := func(snapshot DataSnapshot, previousChildKey string) {
 		mtx.Lock()
 		results = append(results, testEvent{snapshot, previousChildKey})
+		changedNotifications <- Event{Path: snapshot.Key}
 		mtx.Unlock()
 	}
-	err := fb.ChildChanged(fn)
+	err = fb.ChildChanged(fn)
 	require.NoError(t, err)
 
 	// should get regular update events
 	err = fb.Child("foo").Set(2)
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	readNotification(t, changedNotifications)
 
 	err = fb.Set(map[string]string{"lala": "faa", "alal": "aaf"})
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	readNotification(t, changedNotifications)
+	readNotification(t, changedNotifications)
 
 	err = fb.Child("bar").Set(map[string]string{"hi": "mom"})
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	readNotification(t, changedNotifications)
 
 	// should not get push
 	_, err = fb.Push("gaga oh la la")
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
 
 	// should not get adds
 	err = fb.Child("foo123123").Set(false)
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
 
 	// or deletes
 	err = fb.Child("something").Remove()
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
 
 	// should not get notifications for addition to a child
 	err = fb.Child("bar/child").Set(true)
 	require.NoError(t, err)
-
-	// wait for all notifications to come down
-	time.Sleep(time.Millisecond)
+	readNotification(t, allNotifications)
+	readNotification(t, changedNotifications)
 
 	expected := []testEvent{
 		{newSnapshot(sync.NewNode("foo", float64(2))), ""},
@@ -204,43 +243,62 @@ func TestChildRemoved(t *testing.T) {
 	server.Set("foo/something", true)
 	server.Set("foo/AAA", "foo")
 
+	// use this to sync up between different events
+	allNotifications, removedNotifications := make(chan Event), make(chan Event)
+	err := fb.Watch(allNotifications)
+	require.NoError(t, err)
+	readNotification(t, allNotifications)
+
 	var results []testEvent
 	var mtx syncc.Mutex
 	fn := func(snapshot DataSnapshot, previousChildKey string) {
 		mtx.Lock()
 		results = append(results, testEvent{snapshot, previousChildKey})
+		removedNotifications <- Event{Path: snapshot.Key}
 		mtx.Unlock()
 	}
-	err := fb.ChildRemoved(fn)
+	err = fb.ChildRemoved(fn)
 	require.NoError(t, err)
 
 	// should get regular deletion events
 	err = fb.Child("AAA").Remove()
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	readNotification(t, removedNotifications)
 
 	err = fb.Child("something").Remove()
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	readNotification(t, removedNotifications)
 
 	// should get event for something that was deleted that
 	// was created after connection was established
 	err = fb.Child("foobar").Set("eep!")
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
 
 	err = fb.Child("foobar").Remove()
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
+	readNotification(t, removedNotifications)
 
 	err = fb.Child("troll1").Set("yes1")
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
 	err = fb.Child("troll2").Set("yes2")
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
 	err = fb.Child("troll3").Set("yes3")
 	require.NoError(t, err)
+	readNotification(t, allNotifications)
 
 	err = fb.Remove()
 	require.NoError(t, err)
-
-	// wait for all notifications to come down
-	time.Sleep(time.Millisecond)
+	// we should get 3 events since we're removing 3 keys
+	readNotification(t, allNotifications)
+	readNotification(t, removedNotifications)
+	readNotification(t, removedNotifications)
+	readNotification(t, removedNotifications)
 
 	expected := []testEvent{
 		{newSnapshot(sync.NewNode("AAA", "foo")), ""},
@@ -269,17 +327,30 @@ func TestRemoveEventFunc(t *testing.T) {
 	defer server.Close()
 
 	fb := New(server.URL, nil)
+	// use this to sync up between different events
+	allNotifications := make(chan Event)
+	err := fb.Watch(allNotifications)
+	require.NoError(t, err)
+	readNotification(t, allNotifications)
 
 	fn := func(snapshot DataSnapshot, previousChildKey string) {
 		assert.Fail(t, "Should not have received anything")
 	}
-	err := fb.ChildAdded(fn)
+	err = fb.ChildAdded(fn)
 	require.NoError(t, err)
 
 	fb.RemoveEventFunc(fn)
 
 	fb.Child("hello").Set(false)
-	time.Sleep(time.Millisecond)
+	readNotification(t, allNotifications)
 
 	assert.Len(t, fb.eventFuncs, 0)
+}
+
+func readNotification(t *testing.T, notification chan Event) {
+	select {
+	case <-notification:
+	case <-time.After(5 * time.Second):
+		require.FailNow(t, "timed out reading notification")
+	}
 }
