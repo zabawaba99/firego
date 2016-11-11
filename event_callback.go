@@ -1,9 +1,11 @@
 package firego
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/zabawaba99/firego/sync"
 )
@@ -24,11 +26,16 @@ func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
 	return fb.addEventFunc(fn, fn.childAdded)
 }
 
-func (fn ChildEventFunc) childAdded(notifications chan Event) {
-	var prevKey string
-	db := sync.NewDB()
-
+func (fn ChildEventFunc) childAdded(db *sync.Database, prevKey *string, notifications chan Event) error {
 	for event := range notifications {
+		if event.Type == EventTypeError {
+			err, ok := event.Data.(error)
+			if !ok {
+				err = fmt.Errorf("Got error from event %#v", event)
+			}
+			return err
+		}
+
 		if event.Type != EventTypePut {
 			continue
 		}
@@ -52,8 +59,8 @@ func (fn ChildEventFunc) childAdded(notifications chan Event) {
 				v := m[k]
 				node := sync.NewNode(k, v)
 				db.Add(k, node)
-				fn(newSnapshot(node), prevKey)
-				prevKey = k
+				fn(newSnapshot(node), *prevKey)
+				*prevKey = k
 			}
 			continue
 		}
@@ -62,9 +69,10 @@ func (fn ChildEventFunc) childAdded(notifications chan Event) {
 		node := sync.NewNode(child, event.Data)
 		db.Add(strings.Trim(child, "/"), node)
 
-		fn(newSnapshot(node), prevKey)
-		prevKey = child
+		fn(newSnapshot(node), *prevKey)
+		*prevKey = child
 	}
+	return nil
 }
 
 // ChildChanged listens on the firebase instance and executes the callback
@@ -77,17 +85,22 @@ func (fb *Firebase) ChildChanged(fn ChildEventFunc) error {
 	return fb.addEventFunc(fn, fn.childChanged)
 }
 
-func (fn ChildEventFunc) childChanged(notifications chan Event) {
+func (fn ChildEventFunc) childChanged(db *sync.Database, prevKey *string, notifications chan Event) error {
 	first, ok := <-notifications
 	if !ok {
-		return
+		return errors.New("channel closed")
 	}
 
-	db := sync.NewDB()
 	db.Add("", sync.NewNode("", first.Data))
-
-	var prevKey string
 	for event := range notifications {
+		if event.Type == EventTypeError {
+			err, ok := event.Data.(error)
+			if !ok {
+				err = fmt.Errorf("Got error from event %#v", event)
+			}
+			return err
+		}
+
 		path := strings.Trim(event.Path, "/")
 		if event.Data == nil {
 			db.Del(path)
@@ -116,16 +129,17 @@ func (fn ChildEventFunc) childChanged(notifications chan Event) {
 				}
 
 				db.Update(newPath, node)
-				fn(newSnapshot(node), prevKey)
-				prevKey = k
+				fn(newSnapshot(node), *prevKey)
+				*prevKey = k
 			}
 			continue
 		}
 
 		db.Update(path, node)
-		fn(newSnapshot(db.Get(child)), prevKey)
-		prevKey = child
+		fn(newSnapshot(db.Get(child)), *prevKey)
+		*prevKey = child
 	}
+	return nil
 }
 
 // ChildRemoved listens on the firebase instance and executes the callback
@@ -138,17 +152,24 @@ func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
 	return fb.addEventFunc(fn, fn.childRemoved)
 }
 
-func (fn ChildEventFunc) childRemoved(notifications chan Event) {
+func (fn ChildEventFunc) childRemoved(db *sync.Database, prevKey *string, notifications chan Event) error {
 	first, ok := <-notifications
 	if !ok {
-		return
+		return errors.New("channel closed")
 	}
 
-	db := sync.NewDB()
 	node := sync.NewNode("", first.Data)
 	db.Add("", node)
 
 	for event := range notifications {
+		if event.Type == EventTypeError {
+			err, ok := event.Data.(error)
+			if !ok {
+				err = fmt.Errorf("Got error from event %#v", event)
+			}
+			return err
+		}
+
 		path := strings.Trim(event.Path, "/")
 		node := sync.NewNode(path, event.Data)
 
@@ -189,9 +210,12 @@ func (fn ChildEventFunc) childRemoved(notifications chan Event) {
 		fn(newSnapshot(node), "")
 		db.Del(path)
 	}
+	return nil
 }
 
-func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE func(chan Event)) error {
+type handleSSEFunc func(*sync.Database, *string, chan Event) error
+
+func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE handleSSEFunc) error {
 	fb.eventMtx.Lock()
 	defer fb.eventMtx.Unlock()
 
@@ -202,13 +226,48 @@ func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE func(chan Event)) 
 	}
 
 	fb.eventFuncs[key] = stop
-
 	notifications, err := fb.watch(stop)
 	if err != nil {
 		return err
 	}
 
-	go handleSSE(notifications)
+	db := sync.NewDB()
+	prevKey := new(string)
+	var run func(notifications chan Event, backoff time.Duration)
+	run = func(notifications chan Event, backoff time.Duration) {
+		fb.eventMtx.Lock()
+		if _, ok := fb.eventFuncs[key]; !ok {
+			fb.eventMtx.Unlock()
+			// the func has been removed
+			return
+		}
+		fb.eventMtx.Unlock()
+
+		if err := handleSSE(db, prevKey, notifications); err == nil {
+			// we returned gracefully
+			return
+		}
+
+		// give firebase some time
+		backoff *= 2
+		time.Sleep(backoff)
+
+		// try and reconnect
+		for notifications, err = fb.watch(stop); err != nil; time.Sleep(backoff) {
+			fb.eventMtx.Lock()
+			if _, ok := fb.eventFuncs[key]; !ok {
+				fb.eventMtx.Unlock()
+				// func has been removed
+				return
+			}
+			fb.eventMtx.Unlock()
+		}
+
+		// give this another shot
+		run(notifications, backoff)
+	}
+
+	go run(notifications, fb.watchHeartbeat)
 	return nil
 }
 

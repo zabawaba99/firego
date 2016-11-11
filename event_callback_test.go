@@ -1,8 +1,12 @@
 package firego
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	syncc "sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -40,6 +44,65 @@ func (te *testEvents) len() int {
 	l := len(te.events)
 	te.mtx.Unlock()
 	return l
+}
+
+func TestChildAddedReconnect(t *testing.T) {
+	var fb *Firebase
+
+	var count = new(int64)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		require.True(t, ok, "streaming unsupported")
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if atomic.LoadInt64(count) == 0 {
+			fmt.Fprintf(w, "event: put\ndata: %s\n\n", `{"path":"/", "data":{"hello":"world"}}`)
+			atomic.StoreInt64(count, 1)
+		} else {
+			fmt.Fprintf(w, "event: put\ndata: %s\n\n", `{"path":"/goodbye", "data":"world"}`)
+		}
+		flusher.Flush()
+		time.Sleep(2 * fb.watchHeartbeat)
+	}))
+	defer server.Close()
+
+	fb = New(server.URL, nil)
+	fb.watchHeartbeat = 50 * time.Millisecond
+
+	addNotifications := make(chan Event)
+	// use this to sync up between different events
+	var results []testEvent
+	var mtx syncc.Mutex
+	fn := func(snapshot DataSnapshot, previousChildKey string) {
+		mtx.Lock()
+		results = append(results, testEvent{snapshot, previousChildKey})
+		addNotifications <- Event{Path: snapshot.Key}
+		mtx.Unlock()
+	}
+	err := fb.ChildAdded(fn)
+	require.NoError(t, err)
+
+	readNotification(t, addNotifications)
+	readNotification(t, addNotifications)
+
+	expected := []testEvent{
+		{newSnapshot(sync.NewNode("hello", "world")), ""},
+		{newSnapshot(sync.NewNode("goodbye", "world")), "hello"},
+	}
+
+	mtx.Lock()
+	defer mtx.Unlock()
+
+	require.Len(t, results, len(expected))
+	for i, v := range expected {
+		r := results[i]
+
+		assert.EqualValues(t, v.previousKey, r.previousKey, "PK do not match, index %d", i)
+		assert.EqualValues(t, v.snapshot, r.snapshot, "Snapshots do not match, index %d", i)
+	}
 }
 
 func TestChildAdded(t *testing.T) {
