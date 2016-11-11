@@ -208,17 +208,16 @@ func TestChild_Issue26(t *testing.T) {
 }
 
 func TestTimeoutDuration_Headers(t *testing.T) {
-	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
-	TimeoutDuration = time.Millisecond
-
+	var fb *Firebase
 	done := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		time.Sleep(2 * TimeoutDuration)
+		time.Sleep(2 * fb.clientTimeout)
 		close(done)
 	}))
 	defer server.Close()
 
-	fb := New(server.URL, nil)
+	fb = New(server.URL, nil)
+	fb.clientTimeout = time.Millisecond
 	err := fb.Value("")
 	<-done
 	assert.NotNil(t, err)
@@ -232,10 +231,9 @@ func TestTimeoutDuration_Headers(t *testing.T) {
 }
 
 func TestTimeoutDuration_Dial(t *testing.T) {
-	defer func(dur time.Duration) { TimeoutDuration = dur }(TimeoutDuration)
-	TimeoutDuration = time.Microsecond
-
 	fb := New("http://dialtimeouterr.or/", nil)
+	fb.clientTimeout = time.Millisecond
+
 	err := fb.Value("")
 	assert.NotNil(t, err)
 	assert.IsType(t, ErrTimeout{}, err)
