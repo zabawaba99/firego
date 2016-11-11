@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"time"
 )
 
 const (
@@ -165,6 +166,19 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 		resp.Body.Close()
 	}()
 
+	heartbeat := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-heartbeat:
+				// do nothing
+			case <-time.After(2 * time.Minute):
+				resp.Body.Close()
+				return
+			}
+		}
+	}()
+
 	// start parsing response body
 	go func() {
 		defer func() {
@@ -181,6 +195,10 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 			}
 		}
 		for {
+			select {
+			case heartbeat <- struct{}{}:
+			default:
+			}
 			// scan for 'event:'
 			evt, err := readLine(scanner, "event: ")
 			if err != nil {
