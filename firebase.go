@@ -44,6 +44,8 @@ const (
 	equalToParam      = "equalTo"
 )
 
+const defaultHeartbeat = 2 * time.Minute
+
 // Firebase represents a location in the cloud.
 type Firebase struct {
 	url    string
@@ -53,9 +55,10 @@ type Firebase struct {
 	eventMtx   sync.Mutex
 	eventFuncs map[string]chan struct{}
 
-	watchMtx     sync.Mutex
-	watching     bool
-	stopWatching chan struct{}
+	watchMtx       sync.Mutex
+	watching       bool
+	watchHeartbeat time.Duration
+	stopWatching   chan struct{}
 }
 
 // New creates a new Firebase reference,
@@ -81,11 +84,12 @@ func New(url string, client *http.Client) *Firebase {
 	}
 
 	return &Firebase{
-		url:          sanitizeURL(url),
-		params:       _url.Values{},
-		client:       client,
-		stopWatching: make(chan struct{}),
-		eventFuncs:   map[string]chan struct{}{},
+		url:            sanitizeURL(url),
+		params:         _url.Values{},
+		client:         client,
+		stopWatching:   make(chan struct{}),
+		watchHeartbeat: defaultHeartbeat,
+		eventFuncs:     map[string]chan struct{}{},
 	}
 }
 
@@ -177,11 +181,12 @@ func (fb *Firebase) Child(child string) *Firebase {
 
 func (fb *Firebase) copy() *Firebase {
 	c := &Firebase{
-		url:          fb.url,
-		params:       _url.Values{},
-		client:       fb.client,
-		stopWatching: make(chan struct{}),
-		eventFuncs:   map[string]chan struct{}{},
+		url:            fb.url,
+		params:         _url.Values{},
+		client:         fb.client,
+		stopWatching:   make(chan struct{}),
+		watchHeartbeat: defaultHeartbeat,
+		eventFuncs:     map[string]chan struct{}{},
 	}
 
 	// making sure to manually copy the map items into a new

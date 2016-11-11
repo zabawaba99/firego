@@ -78,6 +78,42 @@ func TestWatchRedirectPreservesHeader(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestWatchHeartbeatTimeout(t *testing.T) {
+	var fb *Firebase
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		require.True(t, ok, "streaming unsupported")
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		flusher.Flush()
+		time.Sleep(2 * fb.watchHeartbeat)
+	}))
+	defer server.Close()
+
+	notifications := make(chan Event)
+	fb = New(server.URL, nil)
+	fb.watchHeartbeat = 50 * time.Millisecond
+
+	if err := fb.Watch(notifications); err != nil {
+		t.Fatal(err)
+	}
+
+	event, ok := <-notifications
+	require.True(t, ok, "notifications closed")
+	assert.Equal(t, EventTypeError, event.Type, "event type doesn't match")
+	assert.Empty(t, event.Path, "event path is not empty")
+	assert.NotNil(t, event.Data, "event data is nil")
+	assert.Implements(t, new(error), event.Data)
+	t.Logf("%#v\n", event)
+
+	_, ok = <-notifications
+	require.False(t, ok, "notifications still open")
+}
+
 func TestWatchError(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

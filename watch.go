@@ -172,7 +172,7 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 			select {
 			case <-heartbeat:
 				// do nothing
-			case <-time.After(2 * time.Minute):
+			case <-time.After(fb.watchHeartbeat):
 				resp.Body.Close()
 				return
 			}
