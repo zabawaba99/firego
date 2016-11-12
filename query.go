@@ -1,6 +1,7 @@
 package firego
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -76,11 +77,13 @@ func (fb *Firebase) EqualTo(value string) *Firebase {
 }
 
 func escapeString(s string) string {
-	_, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return `"` + strings.Trim(s, `"`) + `"`
+	_, errNotInt := strconv.ParseInt(s, 10, 64)
+	_, errNotBool := strconv.ParseBool(s)
+	if errNotInt == nil || errNotBool == nil {
+		// we shouldn't escape bools or ints
+		return s
 	}
-	return s
+	return fmt.Sprintf(`%q`, strings.Trim(s, `"`))
 }
 
 // LimitToFirst creates a new Firebase reference with the

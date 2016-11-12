@@ -165,3 +165,19 @@ func TestQueryMultipleParams(t *testing.T) {
 	req := server.receivedReqs[0]
 	assert.Equal(t, orderByParam+"=%22user_id%22&startAt=7", req.URL.Query().Encode())
 }
+
+func TestEscapeString(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		value    string
+		expected string
+	}{
+		{"foo", `"foo"`},
+		{"2", `2`},
+		{"false", `false`},
+	}
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.expected, escapeString(testCase.value))
+	}
+}
