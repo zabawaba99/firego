@@ -2,10 +2,12 @@ package firego
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
-	"strings"
+	"time"
 )
 
 const (
@@ -36,7 +38,7 @@ type Event struct {
 	// Data that changed
 	Data interface{}
 
-	rawData string
+	rawData []byte
 }
 
 // Value converts the raw payload of the event into the given interface.
@@ -45,24 +47,20 @@ func (e Event) Value(v interface{}) error {
 		Data interface{} `json:"data"`
 	}
 	tmp.Data = &v
-	return json.Unmarshal([]byte(e.rawData), &tmp)
+	return json.Unmarshal(e.rawData, &tmp)
 }
 
 // StopWatching stops tears down all connections that are watching.
 func (fb *Firebase) StopWatching() {
-	if fb.isWatching() {
+	fb.watchMtx.Lock()
+	defer fb.watchMtx.Unlock()
+
+	if fb.watching {
+		// flip the bit back to not watching
+		fb.watching = false
 		// signal connection to terminal
 		fb.stopWatching <- struct{}{}
-		// flip the bit back to not watching
-		fb.setWatching(false)
 	}
-}
-
-func (fb *Firebase) isWatching() bool {
-	fb.watchMtx.Lock()
-	v := fb.watching
-	fb.watchMtx.Unlock()
-	return v
 }
 
 func (fb *Firebase) setWatching(v bool) {
@@ -78,12 +76,14 @@ func (fb *Firebase) setWatching(v bool) {
 // second call to this function without a call to fb.StopWatching
 // will close the channel given and return nil immediately.
 func (fb *Firebase) Watch(notifications chan Event) error {
-	if fb.isWatching() {
+	fb.watchMtx.Lock()
+	if fb.watching {
+		fb.watchMtx.Unlock()
 		close(notifications)
 		return nil
 	}
-	// set watching flag
-	fb.setWatching(true)
+	fb.watching = true
+	fb.watchMtx.Unlock()
 
 	stop := make(chan struct{})
 	events, err := fb.watch(stop)
@@ -93,28 +93,54 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 
 	var closedManually bool
 
-	// monitor the stopWatching channel
-	// if we're told to stop, close the response Body
 	go func() {
 		<-fb.stopWatching
-
 		closedManually = true
-		close(stop)
+		stop <- struct{}{}
 	}()
 
 	go func() {
+		defer func() {
+			close(notifications)
+			close(stop)
+		}()
+
 		for event := range events {
-			if event.Type == EventTypeError && closedManually {
-				break
+			if closedManually {
+				return
 			}
 
 			notifications <- event
 		}
-
-		close(notifications)
 	}()
 
 	return nil
+}
+
+func readLine(rdr *bufio.Reader, prefix string) ([]byte, error) {
+	// read event: line
+	line, err := rdr.ReadBytes('\n')
+	if err != nil {
+		return nil, err
+	}
+
+	// empty line check for empty prefix
+	if len(prefix) == 0 {
+		line = bytes.TrimSpace(line)
+		if len(line) != 0 {
+			return nil, errors.New("expected empty line")
+		}
+		return line, nil
+	}
+
+	// check line has event prefix
+	if !bytes.HasPrefix(line, []byte(prefix)) {
+		return nil, errors.New("missing prefix")
+	}
+
+	// trim space
+	line = line[len(prefix):]
+	return bytes.TrimSpace(line), nil
 }
 
 func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
@@ -137,65 +163,68 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 
 	go func() {
 		<-stop
-		defer resp.Body.Close()
+		resp.Body.Close()
+	}()
+
+	heartbeat := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-heartbeat:
+				// do nothing
+			case <-time.After(fb.watchHeartbeat):
+				resp.Body.Close()
+				return
+			}
+		}
 	}()
 
 	// start parsing response body
 	go func() {
+		defer func() {
+			resp.Body.Close()
+			close(notifications)
+		}()
 
 		// build scanner for response body
 		scanner := bufio.NewReader(resp.Body)
-		var scanErr error
-
-	scanning:
-		for scanErr == nil {
-			// split event string
-			// 		event: put
-			// 		data: {"path":"/","data":{"foo":"bar"}}
-
-			var evt []byte
-			var dat []byte
-			isPrefix := true
-			var result []byte
-
-			// For possible results larger than 64 * 1024 bytes (MaxTokenSize)
-			// we need bufio#ReadLine()
-			// 1. step: scan for the 'event:' part. ReadLine() oes not return the \n
-			// so we have to add it to our result buffer.
-			evt, isPrefix, scanErr = scanner.ReadLine()
-			if scanErr != nil {
-				break scanning
+		sendError := func(err error) {
+			notifications <- Event{
+				Type: EventTypeError,
+				Data: err,
 			}
-			result = append(result, evt...)
-			result = append(result, '\n')
-
-			// 2. step: scan for the 'data:' part. Firebase returns just one 'data:'
-			// part, but the value can be very large. If we exceed a certain length
-			// isPrefix will be true until all data is read.
-			for {
-				dat, isPrefix, scanErr = scanner.ReadLine()
-				if scanErr != nil {
-					break scanning
-				}
-				result = append(result, dat...)
-				if !isPrefix {
-					break
-				}
+		}
+		for {
+			select {
+			case heartbeat <- struct{}{}:
+			default:
 			}
-			// Again we add the \n
-			result = append(result, '\n')
-			_, _, scanErr = scanner.ReadLine()
-			if scanErr != nil {
-				break scanning
+			// scan for 'event:'
+			evt, err := readLine(scanner, "event: ")
+			if err != nil {
+				sendError(err)
+				return
 			}
 
-			txt := string(result)
-			parts := strings.Split(txt, "\n")
+			// scan for 'data:'
+			dat, err := readLine(scanner, "data: ")
+			if err != nil {
+				sendError(err)
+				return
+			}
+
+			// read the empty line
+			_, err = readLine(scanner, "")
+			if err != nil {
+				sendError(err)
+				return
+			}
 
 			// create a base event
 			event := Event{
-				Type:    strings.Replace(parts[0], "event: ", "", 1),
-				rawData: strings.Replace(parts[1], "data: ", "", 1),
+				Type:    string(evt),
+				Data:    string(dat),
+				rawData: dat,
 			}
 
 			// should be reacting differently based off the type of event
@@ -203,9 +232,9 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 			case EventTypePut, EventTypePatch:
 				// we've got extra data we've got to parse
 				var data map[string]interface{}
-				if err := json.Unmarshal([]byte(strings.Replace(parts[1], "data: ", "", 1)), &data); err != nil {
-					scanErr = err
-					break scanning
+				if err := json.Unmarshal(event.rawData, &data); err != nil {
+					sendError(err)
+					return
 				}
 
 				// set the extra fields
@@ -223,27 +252,16 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 
 				// send the cancel event
 				notifications <- event
-				break scanning
+				return
 			case EventTypeAuthRevoked:
 				// The data for this event is a string indicating that a the credential has expired
 				// This event will be sent when the supplied auth parameter is no longer valid
-				event.Data = strings.Replace(parts[1], "data: ", "", 1)
 				notifications <- event
-				break scanning
+				return
 			case eventTypeRulesDebug:
-				log.Printf("Rules-Debug: %s\n", txt)
+				log.Printf("Rules-Debug: %s\n%s\n", evt, dat)
 			}
 		}
-
-		if scanErr != nil {
-			notifications <- Event{
-				Type: EventTypeError,
-				Data: scanErr,
-			}
-		}
-
-		// cleanup routines
-		close(notifications)
 	}()
 	return notifications, nil
 }

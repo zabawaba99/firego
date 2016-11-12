@@ -284,7 +284,7 @@ func (ft *Firetest) sse(w http.ResponseWriter, req *http.Request) {
 		case <-httpCloser:
 			return
 		case <-time.After(30 * time.Second):
-			fmt.Fprintf(w, "event: keep-alive\ndata: null")
+			fmt.Fprintf(w, "event: keep-alive\ndata: null\n\n")
 			f.Flush()
 			continue
 		case n, ok := <-c:

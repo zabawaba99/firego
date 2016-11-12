@@ -44,32 +44,43 @@ const (
 	equalToParam      = "equalTo"
 )
 
+const defaultHeartbeat = 2 * time.Minute
+
 // Firebase represents a location in the cloud.
 type Firebase struct {
-	url    string
-	params _url.Values
-	client *http.Client
+	url           string
+	params        _url.Values
+	client        *http.Client
+	clientTimeout time.Duration
 
 	eventMtx   sync.Mutex
 	eventFuncs map[string]chan struct{}
 
-	watchMtx     sync.Mutex
-	watching     bool
-	stopWatching chan struct{}
+	watchMtx       sync.Mutex
+	watching       bool
+	watchHeartbeat time.Duration
+	stopWatching   chan struct{}
 }
 
 // New creates a new Firebase reference,
 // if client is nil, http.DefaultClient is used.
 func New(url string, client *http.Client) *Firebase {
-
+	fb := &Firebase{
+		url:            sanitizeURL(url),
+		params:         _url.Values{},
+		clientTimeout:  TimeoutDuration,
+		stopWatching:   make(chan struct{}),
+		watchHeartbeat: defaultHeartbeat,
+		eventFuncs:     map[string]chan struct{}{},
+	}
 	if client == nil {
 		var tr *http.Transport
 		tr = &http.Transport{
 			DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
 			Dial: func(network, address string) (net.Conn, error) {
 				start := time.Now()
-				c, err := net.DialTimeout(network, address, TimeoutDuration)
-				tr.ResponseHeaderTimeout = TimeoutDuration - time.Since(start)
+				c, err := net.DialTimeout(network, address, fb.clientTimeout)
+				tr.ResponseHeaderTimeout = fb.clientTimeout - time.Since(start)
 				return c, err
 			},
 		}
@@ -80,13 +91,8 @@ func New(url string, client *http.Client) *Firebase {
 		}
 	}
 
-	return &Firebase{
-		url:          sanitizeURL(url),
-		params:       _url.Values{},
-		client:       client,
-		stopWatching: make(chan struct{}),
-		eventFuncs:   map[string]chan struct{}{},
-	}
+	fb.client = client
+	return fb
 }
 
 // Auth sets the custom Firebase token used to authenticate to Firebase.
@@ -177,11 +183,13 @@ func (fb *Firebase) Child(child string) *Firebase {
 
 func (fb *Firebase) copy() *Firebase {
 	c := &Firebase{
-		url:          fb.url,
-		params:       _url.Values{},
-		client:       fb.client,
-		stopWatching: make(chan struct{}),
-		eventFuncs:   map[string]chan struct{}{},
+		url:            fb.url,
+		params:         _url.Values{},
+		client:         fb.client,
+		clientTimeout:  fb.clientTimeout,
+		stopWatching:   make(chan struct{}),
+		watchHeartbeat: defaultHeartbeat,
+		eventFuncs:     map[string]chan struct{}{},
 	}
 
 	// making sure to manually copy the map items into a new
