@@ -56,7 +56,7 @@ func (fb *Firebase) EndAt(value interface{}) *Firebase {
 func (fb *Firebase) OrderBy(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
-		c.params.Set(orderByParam, fmt.Sprintf(`%q`, strings.Trim(value, `"`)))
+		c.params.Set(orderByParam, escapeParameter(value))
 	} else {
 		c.params.Del(orderByParam)
 	}
