@@ -48,9 +48,9 @@ func (fb *Firebase) EndAt(value interface{}) *Firebase {
 // requested OrderBy configuration. The value that is passed in
 // is automatically escaped.
 //
-//    OrderBy(7)       // -> endAt=7
-//    OrderBy("foo")   // -> endAt="foo"
-//    OrderBy(`"foo"`) // -> endAt="foo"
+//    OrderBy("foo")   // -> orderBy="foo"
+//    OrderBy(`"foo"`) // -> orderBy="foo"
+//    OrderBy("$key")  // -> orderBy="$key"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) OrderBy(value string) *Firebase {
