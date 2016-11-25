@@ -22,7 +22,7 @@ before_install:
 
 install:
   # make sure stuff actually builds
-  - go build
+  - go build ./...
 
 script:
   # ensure everything is formatted all pretty like
