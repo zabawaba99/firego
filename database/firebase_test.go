@@ -1,4 +1,4 @@
-package firego
+package database
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zabawaba99/firego/internal/firetest"
+	"github.com/zabawaba99/firego/internal/mockdb"
 )
 
 const URL = "https://somefirebaseapp.firebaseIO.com"
@@ -66,7 +66,7 @@ func TestNewWithProvidedHttpClient(t *testing.T) {
 
 func TestAuth(t *testing.T) {
 	t.Parallel()
-	server := firetest.New()
+	server := mockdb.New()
 	server.Start()
 	defer server.Close()
 
@@ -81,7 +81,7 @@ func TestAuth(t *testing.T) {
 
 func TestUnauth(t *testing.T) {
 	t.Parallel()
-	server := firetest.New()
+	server := mockdb.New()
 	server.Start()
 	defer server.Close()
 
@@ -98,7 +98,7 @@ func TestPush(t *testing.T) {
 	t.Parallel()
 	var (
 		payload = map[string]interface{}{"foo": "bar"}
-		server  = firetest.New()
+		server  = mockdb.New()
 	)
 	server.Start()
 	defer server.Close()
@@ -119,7 +119,7 @@ func TestPush(t *testing.T) {
 
 func TestRemove(t *testing.T) {
 	t.Parallel()
-	server := firetest.New()
+	server := mockdb.New()
 	server.Start()
 	defer server.Close()
 
@@ -137,7 +137,7 @@ func TestSet(t *testing.T) {
 	t.Parallel()
 	var (
 		payload = map[string]interface{}{"foo": "bar"}
-		server  = firetest.New()
+		server  = mockdb.New()
 	)
 	server.Start()
 	defer server.Close()
@@ -154,7 +154,7 @@ func TestUpdate(t *testing.T) {
 	t.Parallel()
 	var (
 		payload = map[string]interface{}{"foo": "bar"}
-		server  = firetest.New()
+		server  = mockdb.New()
 	)
 	server.Start()
 	defer server.Close()
@@ -171,7 +171,7 @@ func TestValue(t *testing.T) {
 	t.Parallel()
 	var (
 		response = map[string]interface{}{"foo": "bar"}
-		server   = firetest.New()
+		server   = mockdb.New()
 	)
 	server.Start()
 	defer server.Close()

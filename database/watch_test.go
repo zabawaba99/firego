@@ -1,4 +1,4 @@
-package firego
+package database
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zabawaba99/firego/internal/firetest"
+	"github.com/zabawaba99/firego/internal/mockdb"
 )
 
 func setupLargeResult() string {
@@ -18,7 +18,7 @@ func setupLargeResult() string {
 }
 
 func TestWatch(t *testing.T) {
-	server := firetest.New()
+	server := mockdb.New()
 	server.Start()
 	defer server.Close()
 
@@ -180,7 +180,7 @@ func TestWatchAuthRevoked(t *testing.T) {
 func TestStopWatch(t *testing.T) {
 	t.Parallel()
 
-	server := firetest.New()
+	server := mockdb.New()
 	server.Start()
 	defer server.Close()
 

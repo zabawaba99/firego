@@ -1,4 +1,4 @@
-package firego
+package database
 
 import (
 	"testing"

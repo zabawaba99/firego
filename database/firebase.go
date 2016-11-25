@@ -1,7 +1,7 @@
 /*
-Package firego is a REST client for Firebase (https://firebase.com).
+package database is a REST client for Firebase Realtime Database (https://firebase.google.com/docs/database/).
 */
-package firego
+package database
 
 import (
 	"bytes"

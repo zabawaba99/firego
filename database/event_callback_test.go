@@ -1,4 +1,4 @@
-package firego
+package database
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zabawaba99/firego/internal/firetest"
+	"github.com/zabawaba99/firego/internal/mockdb"
 	"github.com/zabawaba99/firego/sync"
 )
 
@@ -106,7 +106,7 @@ func TestChildAddedReconnect(t *testing.T) {
 }
 
 func TestChildAdded(t *testing.T) {
-	server := firetest.New()
+	server := mockdb.New()
 	server.Start()
 	defer server.Close()
 
@@ -206,7 +206,7 @@ func TestChildAdded(t *testing.T) {
 }
 
 func TestChildChanged(t *testing.T) {
-	server := firetest.New()
+	server := mockdb.New()
 	server.Start()
 	defer server.Close()
 
@@ -296,7 +296,7 @@ func TestChildChanged(t *testing.T) {
 }
 
 func TestChildRemoved(t *testing.T) {
-	server := firetest.New()
+	server := mockdb.New()
 	server.Start()
 	defer server.Close()
 
@@ -385,7 +385,7 @@ func TestChildRemoved(t *testing.T) {
 }
 
 func TestRemoveEventFunc(t *testing.T) {
-	server := firetest.New()
+	server := mockdb.New()
 	server.Start()
 	defer server.Close()
 
