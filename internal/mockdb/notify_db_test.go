@@ -1,4 +1,4 @@
-package firetest
+package mockdb
 
 import (
 	"regexp"

@@ -1,4 +1,4 @@
-package firetest
+package mockdb
 
 import (
 	"encoding/base64"
@@ -9,9 +9,9 @@ import (
 	"github.com/zabawaba99/firego/sync"
 )
 
-// RequireAuth determines whether or not a Firetest server
+// RequireAuth determines whether or not a mockdb server
 // will require that each request be authorized
-func (ft *Firetest) RequireAuth(v bool) {
+func (ft *Mockdb) RequireAuth(v bool) {
 	var val int32
 	if v {
 		val = 1
@@ -23,7 +23,7 @@ func (ft *Firetest) RequireAuth(v bool) {
 // using a unique name and returns the name
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-post
-func (ft *Firetest) Create(path string, v interface{}) string {
+func (ft *Mockdb) Create(path string, v interface{}) string {
 	src := []byte(fmt.Sprint(time.Now().UnixNano()))
 	name := "~" + base64.StdEncoding.EncodeToString(src)
 
@@ -38,7 +38,7 @@ func (ft *Firetest) Create(path string, v interface{}) string {
 // Any data at child locations will also be deleted.
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-delete
-func (ft *Firetest) Delete(path string) {
+func (ft *Mockdb) Delete(path string) {
 	ft.db.del(sanitizePath(path))
 }
 
@@ -50,7 +50,7 @@ func (ft *Firetest) Delete(path string) {
 // calling remove() on that child.
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-patch
-func (ft *Firetest) Update(path string, v interface{}) {
+func (ft *Mockdb) Update(path string, v interface{}) {
 	path = sanitizePath(path)
 	if v == nil {
 		ft.db.del(path)
@@ -63,7 +63,7 @@ func (ft *Firetest) Update(path string, v interface{}) {
 // This will overwrite any data at this location and all child locations.
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-put
-func (ft *Firetest) Set(path string, v interface{}) {
+func (ft *Mockdb) Set(path string, v interface{}) {
 	ft.db.add(sanitizePath(path), sync.NewNode("", v))
 }
 
@@ -71,7 +71,7 @@ func (ft *Firetest) Set(path string, v interface{}) {
 // requested location
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-get
-func (ft *Firetest) Get(path string) (v interface{}) {
+func (ft *Mockdb) Get(path string) (v interface{}) {
 	n := ft.db.intDB.Get(sanitizePath(path))
 	if n != nil {
 		v = n.Objectify()

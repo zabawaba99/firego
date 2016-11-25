@@ -1,8 +1,8 @@
 /*
-Package firetest provides utilities for Firebase testing
+Package mockdb provides utilities for Firebase testing
 
 */
-package firetest
+package mockdb
 
 import (
 	"crypto/hmac"
@@ -27,8 +27,8 @@ var (
 	invalidAuth          = []byte(`{"error" : "Could not parse auth token."}`)
 )
 
-// Firetest is a Firebase server implementation
-type Firetest struct {
+// Mockdb is a Firebase server implementation
+type Mockdb struct {
 	// URL of form http://ipaddr:port with no trailing slash
 	URL string
 	// Secret used to authenticate with server
@@ -40,10 +40,10 @@ type Firetest struct {
 	requireAuth *int32
 }
 
-// New creates a new Firetest server
-func New() *Firetest {
+// New creates a new mockdb server
+func New() *Mockdb {
 	secret := []byte(fmt.Sprint(time.Now().UnixNano()))
-	return &Firetest{
+	return &Mockdb{
 		db:          newNotifyDB(),
 		Secret:      base64.URLEncoding.EncodeToString(secret),
 		requireAuth: new(int32),
@@ -51,7 +51,7 @@ func New() *Firetest {
 }
 
 // Start starts the server
-func (ft *Firetest) Start() {
+func (ft *Mockdb) Start() {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		if l, err = net.Listen("tcp6", "[::1]:0"); err != nil {
@@ -74,13 +74,13 @@ func (ft *Firetest) Start() {
 }
 
 // Close closes the server
-func (ft *Firetest) Close() {
+func (ft *Mockdb) Close() {
 	if ft.listener != nil {
 		ft.listener.Close()
 	}
 }
 
-func (ft *Firetest) serveHTTP(w http.ResponseWriter, req *http.Request) {
+func (ft *Mockdb) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	if !strings.HasSuffix(req.URL.Path, ".json") {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte(missingJSONExtension))
@@ -134,7 +134,7 @@ func decodeSegment(seg string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(seg)
 }
 
-func (ft *Firetest) validJWT(val string) bool {
+func (ft *Mockdb) validJWT(val string) bool {
 	parts := strings.Split(val, ".")
 	if len(parts) != 3 {
 		return false
@@ -210,7 +210,7 @@ func (ft *Firetest) validJWT(val string) bool {
 	return true
 }
 
-func (ft *Firetest) set(w http.ResponseWriter, req *http.Request) {
+func (ft *Mockdb) set(w http.ResponseWriter, req *http.Request) {
 	body, v, ok := unmarshal(w, req.Body)
 	if !ok {
 		return
@@ -220,7 +220,7 @@ func (ft *Firetest) set(w http.ResponseWriter, req *http.Request) {
 	w.Write(body)
 }
 
-func (ft *Firetest) update(w http.ResponseWriter, req *http.Request) {
+func (ft *Mockdb) update(w http.ResponseWriter, req *http.Request) {
 	body, v, ok := unmarshal(w, req.Body)
 	if !ok {
 		return
@@ -229,7 +229,7 @@ func (ft *Firetest) update(w http.ResponseWriter, req *http.Request) {
 	w.Write(body)
 }
 
-func (ft *Firetest) create(w http.ResponseWriter, req *http.Request) {
+func (ft *Mockdb) create(w http.ResponseWriter, req *http.Request) {
 	_, v, ok := unmarshal(w, req.Body)
 	if !ok {
 		return
@@ -243,11 +243,11 @@ func (ft *Firetest) create(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (ft *Firetest) del(w http.ResponseWriter, req *http.Request) {
+func (ft *Mockdb) del(w http.ResponseWriter, req *http.Request) {
 	ft.Delete(req.URL.Path)
 }
 
-func (ft *Firetest) get(w http.ResponseWriter, req *http.Request) {
+func (ft *Mockdb) get(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	v := ft.Get(req.URL.Path)
@@ -257,7 +257,7 @@ func (ft *Firetest) get(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (ft *Firetest) sse(w http.ResponseWriter, req *http.Request) {
+func (ft *Mockdb) sse(w http.ResponseWriter, req *http.Request) {
 	f, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming is not supported", http.StatusInternalServerError)

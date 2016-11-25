@@ -1,4 +1,4 @@
-package firetest_test
+package mockdb_test
 
 import (
 	"io/ioutil"
@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/zabawaba99/firego/internal/firetest"
+	"github.com/zabawaba99/firego/internal/mockdb"
 )
 
 func Example() {
-	ft := firetest.New()
+	ft := mockdb.New()
 	defer ft.Close()
 
 	ft.Start()

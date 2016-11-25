@@ -1,4 +1,4 @@
-# firetest
+# Mockdb
 
 Firebase test server meant for use in unit tests
 
