@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	_url "net/url"
 	"strings"
@@ -17,18 +16,7 @@ import (
 	"time"
 )
 
-// TimeoutDuration is the length of time any request will have to establish
-// a connection and receive headers from Firebase before returning
-// an ErrTimeout error.
-var TimeoutDuration = 30 * time.Second
-
-var defaultRedirectLimit = 30
-
-// ErrTimeout is an error type is that is returned if a request
-// exceeds the TimeoutDuration configured.
-type ErrTimeout struct {
-	error
-}
+const defaultRedirectLimit = 30
 
 // query parameter constants
 const (
@@ -48,10 +36,9 @@ const defaultHeartbeat = 2 * time.Minute
 
 // Firebase represents a location in the cloud.
 type Firebase struct {
-	url           string
-	params        _url.Values
-	client        *http.Client
-	clientTimeout time.Duration
+	url    string
+	params _url.Values
+	client *http.Client
 
 	eventMtx   sync.Mutex
 	eventFuncs map[string]chan struct{}
@@ -68,25 +55,13 @@ func New(url string, client *http.Client) *Firebase {
 	fb := &Firebase{
 		url:            sanitizeURL(url),
 		params:         _url.Values{},
-		clientTimeout:  TimeoutDuration,
 		stopWatching:   make(chan struct{}),
 		watchHeartbeat: defaultHeartbeat,
 		eventFuncs:     map[string]chan struct{}{},
 	}
 	if client == nil {
-		var tr *http.Transport
-		tr = &http.Transport{
-			DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
-			Dial: func(network, address string) (net.Conn, error) {
-				start := time.Now()
-				c, err := net.DialTimeout(network, address, fb.clientTimeout)
-				tr.ResponseHeaderTimeout = fb.clientTimeout - time.Since(start)
-				return c, err
-			},
-		}
-
 		client = &http.Client{
-			Transport:     tr,
+			Transport:     http.DefaultClient.Transport,
 			CheckRedirect: redirectPreserveHeaders,
 		}
 	}
@@ -186,7 +161,6 @@ func (fb *Firebase) copy() *Firebase {
 		url:            fb.url,
 		params:         _url.Values{},
 		client:         fb.client,
-		clientTimeout:  fb.clientTimeout,
 		stopWatching:   make(chan struct{}),
 		watchHeartbeat: defaultHeartbeat,
 		eventFuncs:     map[string]chan struct{}{},
@@ -239,29 +213,7 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 	}
 
 	resp, err := fb.client.Do(req)
-	switch err := err.(type) {
-	default:
-		return nil, err
-	case nil:
-		// carry on
-
-	case *_url.Error:
-		// `http.Client.Do` will return a `url.Error` that wraps a `net.Error`
-		// when exceeding it's `Transport`'s `ResponseHeadersTimeout`
-		e1, ok := err.Err.(net.Error)
-		if ok && e1.Timeout() {
-			return nil, ErrTimeout{err}
-		}
-
-		return nil, err
-
-	case net.Error:
-		// `http.Client.Do` will return a `net.Error` directly when Dial times
-		// out, or when the Client's RoundTripper otherwise returns an err
-		if err.Timeout() {
-			return nil, ErrTimeout{err}
-		}
-
+	if err != nil {
 		return nil, err
 	}
 

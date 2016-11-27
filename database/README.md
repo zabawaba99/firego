@@ -29,16 +29,6 @@ with existing http client
 f := database.New("https://my-firebase-app.firebaseIO.com", client)
 ```
 
-### Request Timeouts
-
-By default, the `Firebase` reference will timeout after 30 seconds of trying
-to reach a Firebase server. You can configure this value by setting the global
-timeout duration
-
-```go
-firego.TimeoutDuration = time.Minute
-```
-
 ### Auth Tokens
 
 ```go

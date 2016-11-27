@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -205,40 +204,4 @@ func TestChild_Issue26(t *testing.T) {
 
 	child1.Shallow(true)
 	assert.Len(t, child2.params, 0)
-}
-
-func TestTimeoutDuration_Headers(t *testing.T) {
-	var fb *Firebase
-	done := make(chan struct{})
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		time.Sleep(2 * fb.clientTimeout)
-		close(done)
-	}))
-	defer server.Close()
-
-	fb = New(server.URL, nil)
-	fb.clientTimeout = time.Millisecond
-	err := fb.Value("")
-	<-done
-	assert.NotNil(t, err)
-	assert.IsType(t, ErrTimeout{}, err)
-
-	// ResponseHeaderTimeout should be TimeoutDuration less the time it took to dial, and should be positive
-	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
-	tr := fb.client.Transport.(*http.Transport)
-	assert.True(t, tr.ResponseHeaderTimeout < TimeoutDuration)
-	assert.True(t, tr.ResponseHeaderTimeout > 0)
-}
-
-func TestTimeoutDuration_Dial(t *testing.T) {
-	fb := New("http://dialtimeouterr.or/", nil)
-	fb.clientTimeout = time.Millisecond
-
-	err := fb.Value("")
-	assert.NotNil(t, err)
-	assert.IsType(t, ErrTimeout{}, err)
-
-	// ResponseHeaderTimeout should be negative since the total duration was consumed when dialing
-	require.IsType(t, (*http.Transport)(nil), fb.client.Transport)
-	assert.True(t, fb.client.Transport.(*http.Transport).ResponseHeaderTimeout < 0)
 }
