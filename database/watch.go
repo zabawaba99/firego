@@ -51,42 +51,42 @@ func (e Event) Value(v interface{}) error {
 }
 
 // StopWatching stops tears down all connections that are watching.
-func (fb *Firebase) StopWatching() {
-	fb.watchMtx.Lock()
-	defer fb.watchMtx.Unlock()
+func (db *Database) StopWatching() {
+	db.watchMtx.Lock()
+	defer db.watchMtx.Unlock()
 
-	if fb.watching {
+	if db.watching {
 		// flip the bit back to not watching
-		fb.watching = false
+		db.watching = false
 		// signal connection to terminal
-		fb.stopWatching <- struct{}{}
+		db.stopWatching <- struct{}{}
 	}
 }
 
-func (fb *Firebase) setWatching(v bool) {
-	fb.watchMtx.Lock()
-	fb.watching = v
-	fb.watchMtx.Unlock()
+func (db *Database) setWatching(v bool) {
+	db.watchMtx.Lock()
+	db.watching = v
+	db.watchMtx.Unlock()
 }
 
 // Watch listens for changes on a firebase instance and
 // passes over to the given chan.
 //
 // Only one connection can be established at a time. The
-// second call to this function without a call to fb.StopWatching
+// second call to this function without a call to db.StopWatching
 // will close the channel given and return nil immediately.
-func (fb *Firebase) Watch(notifications chan Event) error {
-	fb.watchMtx.Lock()
-	if fb.watching {
-		fb.watchMtx.Unlock()
+func (db *Database) Watch(notifications chan Event) error {
+	db.watchMtx.Lock()
+	if db.watching {
+		db.watchMtx.Unlock()
 		close(notifications)
 		return nil
 	}
-	fb.watching = true
-	fb.watchMtx.Unlock()
+	db.watching = true
+	db.watchMtx.Unlock()
 
 	stop := make(chan struct{})
-	events, err := fb.watch(stop)
+	events, err := db.watch(stop)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	var closedManually bool
 
 	go func() {
-		<-fb.stopWatching
+		<-db.stopWatching
 		closedManually = true
 		stop <- struct{}{}
 	}()
@@ -143,19 +143,19 @@ func readLine(rdr *bufio.Reader, prefix string) ([]byte, error) {
 	return bytes.TrimSpace(line), nil
 }
 
-func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
+func (db *Database) watch(stop chan struct{}) (chan Event, error) {
 	// build SSE request
-	req, err := http.NewRequest("GET", fb.String(), nil)
+	req, err := http.NewRequest("GET", db.String(), nil)
 	if err != nil {
-		fb.setWatching(false)
+		db.setWatching(false)
 		return nil, err
 	}
 	req.Header.Add("Accept", "text/event-stream")
 
 	// do request
-	resp, err := fb.client.Do(req)
+	resp, err := db.client.Do(req)
 	if err != nil {
-		fb.setWatching(false)
+		db.setWatching(false)
 		return nil, err
 	}
 
@@ -172,7 +172,7 @@ func (fb *Firebase) watch(stop chan struct{}) (chan Event, error) {
 			select {
 			case <-heartbeat:
 				// do nothing
-			case <-time.After(fb.watchHeartbeat):
+			case <-time.After(db.watchHeartbeat):
 				resp.Body.Close()
 				return
 			}

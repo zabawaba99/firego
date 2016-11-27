@@ -1,5 +1,5 @@
 /*
-package database is a REST client for Firebase Realtime Database (https://firebase.google.com/docs/database/).
+Package database is a REST client for Firebase Realtime Database (https://firebase.google.com/docs/database/).
 */
 package database
 
@@ -34,8 +34,8 @@ const (
 
 const defaultHeartbeat = 2 * time.Minute
 
-// Firebase represents a location in the cloud.
-type Firebase struct {
+// Database represents a location in the cloud.
+type Database struct {
 	url    string
 	params _url.Values
 	client *http.Client
@@ -51,8 +51,8 @@ type Firebase struct {
 
 // New creates a new Firebase reference,
 // if client is nil, http.DefaultClient is used.
-func New(url string, client *http.Client) *Firebase {
-	fb := &Firebase{
+func New(url string, client *http.Client) *Database {
+	db := &Database{
 		url:            sanitizeURL(url),
 		params:         _url.Values{},
 		stopWatching:   make(chan struct{}),
@@ -66,27 +66,27 @@ func New(url string, client *http.Client) *Firebase {
 		}
 	}
 
-	fb.client = client
-	return fb
+	db.client = client
+	return db
 }
 
 // Auth sets the custom Firebase token used to authenticate to Firebase.
-func (fb *Firebase) Auth(token string) {
-	fb.params.Set(authParam, token)
+func (db *Database) Auth(token string) {
+	db.params.Set(authParam, token)
 }
 
 // Unauth removes the current token being used to authenticate to Firebase.
-func (fb *Firebase) Unauth() {
-	fb.params.Del(authParam)
+func (db *Database) Unauth() {
+	db.params.Del(authParam)
 }
 
 // Push creates a reference to an auto-generated child location.
-func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
+func (db *Database) Push(v interface{}) (*Database, error) {
 	bytes, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
 	}
-	bytes, err = fb.doRequest("POST", bytes)
+	bytes, err = db.doRequest("POST", bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -94,14 +94,14 @@ func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	if err := json.Unmarshal(bytes, &m); err != nil {
 		return nil, err
 	}
-	newRef := fb.copy()
-	newRef.url = fb.url + "/" + m["name"]
+	newRef := db.copy()
+	newRef.url = db.url + "/" + m["name"]
 	return newRef, err
 }
 
 // Remove the Firebase reference from the cloud.
-func (fb *Firebase) Remove() error {
-	_, err := fb.doRequest("DELETE", nil)
+func (db *Database) Remove() error {
+	_, err := db.doRequest("DELETE", nil)
 	if err != nil {
 		return err
 	}
@@ -109,28 +109,28 @@ func (fb *Firebase) Remove() error {
 }
 
 // Set the value of the Firebase reference.
-func (fb *Firebase) Set(v interface{}) error {
+func (db *Database) Set(v interface{}) error {
 	bytes, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
-	_, err = fb.doRequest("PUT", bytes)
+	_, err = db.doRequest("PUT", bytes)
 	return err
 }
 
 // Update the specific child with the given value.
-func (fb *Firebase) Update(v interface{}) error {
+func (db *Database) Update(v interface{}) error {
 	bytes, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
-	_, err = fb.doRequest("PATCH", bytes)
+	_, err = db.doRequest("PATCH", bytes)
 	return err
 }
 
 // Value gets the value of the Firebase reference.
-func (fb *Firebase) Value(v interface{}) error {
-	bytes, err := fb.doRequest("GET", nil)
+func (db *Database) Value(v interface{}) error {
+	bytes, err := db.doRequest("GET", nil)
 	if err != nil {
 		return err
 	}
@@ -139,28 +139,28 @@ func (fb *Firebase) Value(v interface{}) error {
 
 // String returns the string representation of the
 // Firebase reference.
-func (fb *Firebase) String() string {
-	path := fb.url + "/.json"
+func (db *Database) String() string {
+	path := db.url + "/.json"
 
-	if len(fb.params) > 0 {
-		path += "?" + fb.params.Encode()
+	if len(db.params) > 0 {
+		path += "?" + db.params.Encode()
 	}
 	return path
 }
 
 // Child creates a new Firebase reference for the requested
 // child with the same configuration as the parent.
-func (fb *Firebase) Child(child string) *Firebase {
-	c := fb.copy()
+func (db *Database) Child(child string) *Database {
+	c := db.copy()
 	c.url = c.url + "/" + child
 	return c
 }
 
-func (fb *Firebase) copy() *Firebase {
-	c := &Firebase{
-		url:            fb.url,
+func (db *Database) copy() *Database {
+	c := &Database{
+		url:            db.url,
 		params:         _url.Values{},
-		client:         fb.client,
+		client:         db.client,
 		stopWatching:   make(chan struct{}),
 		watchHeartbeat: defaultHeartbeat,
 		eventFuncs:     map[string]chan struct{}{},
@@ -168,7 +168,7 @@ func (fb *Firebase) copy() *Firebase {
 
 	// making sure to manually copy the map items into a new
 	// map to avoid modifying the map reference.
-	for k, v := range fb.params {
+	for k, v := range db.params {
 		c.params[k] = v
 	}
 	return c
@@ -206,13 +206,13 @@ func redirectPreserveHeaders(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
-	req, err := http.NewRequest(method, fb.String(), bytes.NewReader(body))
+func (db *Database) doRequest(method string, body []byte) ([]byte, error) {
+	req, err := http.NewRequest(method, db.String(), bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := fb.client.Do(req)
+	resp, err := db.client.Do(req)
 	if err != nil {
 		return nil, err
 	}

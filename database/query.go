@@ -15,8 +15,8 @@ import (
 //    StartAt(`"foo"`)  // -> endAt="foo"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
-func (fb *Firebase) StartAt(value string) *Firebase {
-	c := fb.copy()
+func (db *Database) StartAt(value string) *Database {
+	c := db.copy()
 	if value != "" {
 		c.params.Set(startAtParam, escapeString(value))
 	} else {
@@ -34,8 +34,8 @@ func (fb *Firebase) StartAt(value string) *Firebase {
 //    EndAt(`"foo"`)  // -> endAt="foo"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
-func (fb *Firebase) EndAt(value string) *Firebase {
-	c := fb.copy()
+func (db *Database) EndAt(value string) *Database {
+	c := db.copy()
 	if value != "" {
 		c.params.Set(endAtParam, escapeString(value))
 	} else {
@@ -53,8 +53,8 @@ func (fb *Firebase) EndAt(value string) *Firebase {
 //    OrderBy(`"foo"`) // -> endAt="foo"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
-func (fb *Firebase) OrderBy(value string) *Firebase {
-	c := fb.copy()
+func (db *Database) OrderBy(value string) *Database {
+	c := db.copy()
 	if value != "" {
 		c.params.Set(orderByParam, escapeString(value))
 	} else {
@@ -66,8 +66,8 @@ func (fb *Firebase) OrderBy(value string) *Firebase {
 // EqualTo sends the query string equalTo so that one can find a single value
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
-func (fb *Firebase) EqualTo(value string) *Firebase {
-	c := fb.copy()
+func (db *Database) EqualTo(value string) *Database {
+	c := db.copy()
 	if value != "" {
 		c.params.Set(equalToParam, escapeString(value))
 	} else {
@@ -90,8 +90,8 @@ func escapeString(s string) string {
 // requested limitToFirst configuration.
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-param-query
-func (fb *Firebase) LimitToFirst(value int64) *Firebase {
-	c := fb.copy()
+func (db *Database) LimitToFirst(value int64) *Database {
+	c := db.copy()
 	if value > 0 {
 		c.params.Set(limitToFirstParam, strconv.FormatInt(value, 10))
 	} else {
@@ -104,8 +104,8 @@ func (fb *Firebase) LimitToFirst(value int64) *Firebase {
 // requested limitToLast configuration.
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-param-query
-func (fb *Firebase) LimitToLast(value int64) *Firebase {
-	c := fb.copy()
+func (db *Database) LimitToLast(value int64) *Database {
+	c := db.copy()
 	if value > 0 {
 		c.params.Set(limitToLastParam, strconv.FormatInt(value, 10))
 	} else {
@@ -120,11 +120,11 @@ func (fb *Firebase) LimitToLast(value int64) *Firebase {
 // for each key will be truncated to true.
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-param-shallow
-func (fb *Firebase) Shallow(v bool) {
+func (db *Database) Shallow(v bool) {
 	if v {
-		fb.params.Set(shallowParam, "true")
+		db.params.Set(shallowParam, "true")
 	} else {
-		fb.params.Del(shallowParam)
+		db.params.Del(shallowParam)
 	}
 }
 
@@ -132,10 +132,10 @@ func (fb *Firebase) Shallow(v bool) {
 // for the values priority. By default, the priority is not returned.
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-param-format
-func (fb *Firebase) IncludePriority(v bool) {
+func (db *Database) IncludePriority(v bool) {
 	if v {
-		fb.params.Set(formatParam, formatVal)
+		db.params.Set(formatParam, formatVal)
 	} else {
-		fb.params.Del(formatParam)
+		db.params.Del(formatParam)
 	}
 }

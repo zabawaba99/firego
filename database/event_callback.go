@@ -22,11 +22,11 @@ type ChildEventFunc func(snapshot DataSnapshot, previousChildKey string)
 // You cannot set the same function twice on a Firebase reference, if you do
 // the first function will be overridden and you will not be able to close the
 // connection.
-func (fb *Firebase) ChildAdded(fn ChildEventFunc) error {
-	return fb.addEventFunc(fn, fn.childAdded)
+func (db *Database) ChildAdded(fn ChildEventFunc) error {
+	return db.addEventFunc(fn, fn.childAdded)
 }
 
-func (fn ChildEventFunc) childAdded(db *sync.Database, prevKey *string, notifications chan Event) error {
+func (fn ChildEventFunc) childAdded(localDB *sync.Database, prevKey *string, notifications chan Event) error {
 	for event := range notifications {
 		if event.Type == EventTypeError {
 			err, ok := event.Data.(error)
@@ -42,11 +42,11 @@ func (fn ChildEventFunc) childAdded(db *sync.Database, prevKey *string, notifica
 
 		child := strings.Split(event.Path[1:], "/")[0]
 		if event.Data == nil {
-			db.Del(child)
+			localDB.Del(child)
 			continue
 		}
 
-		if _, ok := db.Get("").Child(child); ok {
+		if _, ok := localDB.Get("").Child(child); ok {
 			// if the child isn't being added, forget it
 			continue
 		}
@@ -58,7 +58,7 @@ func (fn ChildEventFunc) childAdded(db *sync.Database, prevKey *string, notifica
 			for _, k := range sortedKeys(m) {
 				v := m[k]
 				node := sync.NewNode(k, v)
-				db.Add(k, node)
+				localDB.Add(k, node)
 				fn(newSnapshot(node), *prevKey)
 				*prevKey = k
 			}
@@ -67,7 +67,7 @@ func (fn ChildEventFunc) childAdded(db *sync.Database, prevKey *string, notifica
 
 		// we have a single event to process
 		node := sync.NewNode(child, event.Data)
-		db.Add(strings.Trim(child, "/"), node)
+		localDB.Add(strings.Trim(child, "/"), node)
 
 		fn(newSnapshot(node), *prevKey)
 		*prevKey = child
@@ -81,17 +81,17 @@ func (fn ChildEventFunc) childAdded(db *sync.Database, prevKey *string, notifica
 // You cannot set the same function twice on a Firebase reference, if you do
 // the first function will be overridden and you will not be able to close the
 // connection.
-func (fb *Firebase) ChildChanged(fn ChildEventFunc) error {
-	return fb.addEventFunc(fn, fn.childChanged)
+func (db *Database) ChildChanged(fn ChildEventFunc) error {
+	return db.addEventFunc(fn, fn.childChanged)
 }
 
-func (fn ChildEventFunc) childChanged(db *sync.Database, prevKey *string, notifications chan Event) error {
+func (fn ChildEventFunc) childChanged(localDB *sync.Database, prevKey *string, notifications chan Event) error {
 	first, ok := <-notifications
 	if !ok {
 		return errors.New("channel closed")
 	}
 
-	db.Add("", sync.NewNode("", first.Data))
+	localDB.Add("", sync.NewNode("", first.Data))
 	for event := range notifications {
 		if event.Type == EventTypeError {
 			err, ok := event.Data.(error)
@@ -103,17 +103,17 @@ func (fn ChildEventFunc) childChanged(db *sync.Database, prevKey *string, notifi
 
 		path := strings.Trim(event.Path, "/")
 		if event.Data == nil {
-			db.Del(path)
+			localDB.Del(path)
 			continue
 		}
 
 		child := strings.Split(path, "/")[0]
 		node := sync.NewNode(child, event.Data)
 
-		dbNode := db.Get("")
+		dbNode := localDB.Get("")
 		if _, ok := dbNode.Child(child); child != "" && !ok {
 			// if the child is new, ignore it.
-			db.Add(path, node)
+			localDB.Add(path, node)
 			continue
 		}
 
@@ -124,19 +124,19 @@ func (fn ChildEventFunc) childChanged(db *sync.Database, prevKey *string, notifi
 				node := sync.NewNode(k, v)
 				newPath := strings.TrimPrefix(child+"/"+k, "/")
 				if _, ok := dbNode.Child(k); !ok {
-					db.Add(newPath, node)
+					localDB.Add(newPath, node)
 					continue
 				}
 
-				db.Update(newPath, node)
+				localDB.Update(newPath, node)
 				fn(newSnapshot(node), *prevKey)
 				*prevKey = k
 			}
 			continue
 		}
 
-		db.Update(path, node)
-		fn(newSnapshot(db.Get(child)), *prevKey)
+		localDB.Update(path, node)
+		fn(newSnapshot(localDB.Get(child)), *prevKey)
 		*prevKey = child
 	}
 	return nil
@@ -148,18 +148,18 @@ func (fn ChildEventFunc) childChanged(db *sync.Database, prevKey *string, notifi
 // You cannot set the same function twice on a Firebase reference, if you do
 // the first function will be overridden and you will not be able to close the
 // connection.
-func (fb *Firebase) ChildRemoved(fn ChildEventFunc) error {
-	return fb.addEventFunc(fn, fn.childRemoved)
+func (db *Database) ChildRemoved(fn ChildEventFunc) error {
+	return db.addEventFunc(fn, fn.childRemoved)
 }
 
-func (fn ChildEventFunc) childRemoved(db *sync.Database, prevKey *string, notifications chan Event) error {
+func (fn ChildEventFunc) childRemoved(localDB *sync.Database, prevKey *string, notifications chan Event) error {
 	first, ok := <-notifications
 	if !ok {
 		return errors.New("channel closed")
 	}
 
 	node := sync.NewNode("", first.Data)
-	db.Add("", node)
+	localDB.Add("", node)
 
 	for event := range notifications {
 		if event.Type == EventTypeError {
@@ -174,19 +174,19 @@ func (fn ChildEventFunc) childRemoved(db *sync.Database, prevKey *string, notifi
 		node := sync.NewNode(path, event.Data)
 
 		if event.Type == EventTypePatch {
-			db.Update(path, node)
+			localDB.Update(path, node)
 			continue
 		}
 
 		if event.Data != nil {
-			db.Add(path, node)
+			localDB.Add(path, node)
 			continue
 		}
 
 		if path == "" {
 			// if node that is being listened to is deleted,
 			// an event should be triggered for every child
-			children := db.Get("").Children
+			children := localDB.Get("").Children
 			orderedChildren := make([]string, len(children))
 			var i int
 			for k := range children {
@@ -197,53 +197,53 @@ func (fn ChildEventFunc) childRemoved(db *sync.Database, prevKey *string, notifi
 			sort.Strings(orderedChildren)
 
 			for _, k := range orderedChildren {
-				node := db.Get(k)
+				node := localDB.Get(k)
 				fn(newSnapshot(node), "")
-				db.Del(k)
+				localDB.Del(k)
 			}
 
-			db.Del(path)
+			localDB.Del(path)
 			continue
 		}
 
-		node = db.Get(path)
+		node = localDB.Get(path)
 		fn(newSnapshot(node), "")
-		db.Del(path)
+		localDB.Del(path)
 	}
 	return nil
 }
 
 type handleSSEFunc func(*sync.Database, *string, chan Event) error
 
-func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE handleSSEFunc) error {
-	fb.eventMtx.Lock()
-	defer fb.eventMtx.Unlock()
+func (db *Database) addEventFunc(fn ChildEventFunc, handleSSE handleSSEFunc) error {
+	db.eventMtx.Lock()
+	defer db.eventMtx.Unlock()
 
 	stop := make(chan struct{})
 	key := fmt.Sprintf("%v", fn)
-	if _, ok := fb.eventFuncs[key]; ok {
+	if _, ok := db.eventFuncs[key]; ok {
 		return nil
 	}
 
-	fb.eventFuncs[key] = stop
-	notifications, err := fb.watch(stop)
+	db.eventFuncs[key] = stop
+	notifications, err := db.watch(stop)
 	if err != nil {
 		return err
 	}
 
-	db := sync.NewDB()
+	localDB := sync.NewDB()
 	prevKey := new(string)
 	var run func(notifications chan Event, backoff time.Duration)
 	run = func(notifications chan Event, backoff time.Duration) {
-		fb.eventMtx.Lock()
-		if _, ok := fb.eventFuncs[key]; !ok {
-			fb.eventMtx.Unlock()
+		db.eventMtx.Lock()
+		if _, ok := db.eventFuncs[key]; !ok {
+			db.eventMtx.Unlock()
 			// the func has been removed
 			return
 		}
-		fb.eventMtx.Unlock()
+		db.eventMtx.Unlock()
 
-		if err := handleSSE(db, prevKey, notifications); err == nil {
+		if err := handleSSE(localDB, prevKey, notifications); err == nil {
 			// we returned gracefully
 			return
 		}
@@ -253,37 +253,37 @@ func (fb *Firebase) addEventFunc(fn ChildEventFunc, handleSSE handleSSEFunc) err
 		time.Sleep(backoff)
 
 		// try and reconnect
-		for notifications, err = fb.watch(stop); err != nil; time.Sleep(backoff) {
-			fb.eventMtx.Lock()
-			if _, ok := fb.eventFuncs[key]; !ok {
-				fb.eventMtx.Unlock()
+		for notifications, err = db.watch(stop); err != nil; time.Sleep(backoff) {
+			db.eventMtx.Lock()
+			if _, ok := db.eventFuncs[key]; !ok {
+				db.eventMtx.Unlock()
 				// func has been removed
 				return
 			}
-			fb.eventMtx.Unlock()
+			db.eventMtx.Unlock()
 		}
 
 		// give this another shot
 		run(notifications, backoff)
 	}
 
-	go run(notifications, fb.watchHeartbeat)
+	go run(notifications, db.watchHeartbeat)
 	return nil
 }
 
 // RemoveEventFunc removes the given function from the firebase
 // reference.
-func (fb *Firebase) RemoveEventFunc(fn ChildEventFunc) {
-	fb.eventMtx.Lock()
-	defer fb.eventMtx.Unlock()
+func (db *Database) RemoveEventFunc(fn ChildEventFunc) {
+	db.eventMtx.Lock()
+	defer db.eventMtx.Unlock()
 
 	key := fmt.Sprintf("%v", fn)
-	stop, ok := fb.eventFuncs[key]
+	stop, ok := db.eventFuncs[key]
 	if !ok {
 		return
 	}
 
-	delete(fb.eventFuncs, key)
+	delete(db.eventFuncs, key)
 	close(stop)
 }
 

@@ -22,10 +22,10 @@ func TestWatch(t *testing.T) {
 	server.Start()
 	defer server.Close()
 
-	fb := New(server.URL, nil)
+	db := New(server.URL, nil)
 
 	notifications := make(chan Event)
-	err := fb.Watch(notifications)
+	err := db.Watch(notifications)
 	assert.NoError(t, err)
 
 	l := setupLargeResult()
@@ -71,15 +71,15 @@ func TestWatchRedirectPreservesHeader(t *testing.T) {
 	}))
 	defer server.Close()
 
-	fb := New(server.URL, nil)
+	db := New(server.URL, nil)
 	notifications := make(chan Event)
 
-	err := fb.Watch(notifications)
+	err := db.Watch(notifications)
 	assert.NoError(t, err)
 }
 
 func TestWatchHeartbeatTimeout(t *testing.T) {
-	var fb *Firebase
+	var db *Database
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		flusher, ok := w.(http.Flusher)
@@ -90,15 +90,15 @@ func TestWatchHeartbeatTimeout(t *testing.T) {
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		flusher.Flush()
-		time.Sleep(2 * fb.watchHeartbeat)
+		time.Sleep(2 * db.watchHeartbeat)
 	}))
 	defer server.Close()
 
 	notifications := make(chan Event)
-	fb = New(server.URL, nil)
-	fb.watchHeartbeat = 50 * time.Millisecond
+	db = New(server.URL, nil)
+	db.watchHeartbeat = 50 * time.Millisecond
 
-	if err := fb.Watch(notifications); err != nil {
+	if err := db.Watch(notifications); err != nil {
 		t.Fatal(err)
 	}
 
@@ -129,11 +129,11 @@ func TestWatchError(t *testing.T) {
 
 	var (
 		notifications = make(chan Event)
-		fb            = New(server.URL, nil)
+		db            = New(server.URL, nil)
 	)
 	defer server.Close()
 
-	if err := fb.Watch(notifications); err != nil {
+	if err := db.Watch(notifications); err != nil {
 		t.Fatal(err)
 	}
 
@@ -163,10 +163,10 @@ func TestWatchAuthRevoked(t *testing.T) {
 
 	var (
 		notifications = make(chan Event)
-		fb            = New(server.URL, nil)
+		db            = New(server.URL, nil)
 	)
 
-	if err := fb.Watch(notifications); err != nil {
+	if err := db.Watch(notifications); err != nil {
 		t.Fatal(err)
 	}
 
@@ -184,14 +184,14 @@ func TestStopWatch(t *testing.T) {
 	server.Start()
 	defer server.Close()
 
-	fb := New(server.URL, nil)
+	db := New(server.URL, nil)
 
 	notifications := make(chan Event)
-	err := fb.Watch(notifications)
+	err := db.Watch(notifications)
 	assert.NoError(t, err)
 
 	<-notifications // get initial notification
-	fb.StopWatching()
+	db.StopWatching()
 	_, ok := <-notifications
 	assert.False(t, ok, "notifications should be closed")
 }

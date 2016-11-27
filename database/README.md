@@ -20,20 +20,20 @@ import "gopkg.in/zabawaba99/firego/database.v2"
 Create a new firego reference
 
 ```go
-f := database.New("https://my-firebase-app.firebaseIO.com", nil)
+db := database.New("https://my-firebase-app.firebaseIO.com", nil)
 ```
 
 with existing http client
 
 ```go
-f := database.New("https://my-firebase-app.firebaseIO.com", client)
+db := database.New("https://my-firebase-app.firebaseIO.com", client)
 ```
 
 ### Auth Tokens
 
 ```go
-f.Auth("some-token-that-was-created-for-me")
-f.Unauth()
+db.Auth("some-token-that-was-created-for-me")
+db.Unauth()
 ```
 
 Visit [Fireauth](https://github.com/zabawaba99/fireauth) if you'd like to generate your own auth tokens
@@ -42,7 +42,7 @@ Visit [Fireauth](https://github.com/zabawaba99/fireauth) if you'd like to genera
 
 ```go
 var v map[string]interface{}
-if err := f.Value(&v); err != nil {
+if err := db.Value(&v); err != nil {
   log.Fatal(err)
 }
 fmt.Printf("%s\n", v)
@@ -55,7 +55,7 @@ for more information on what each function does.
 
 ```go
 var v map[string]interface{}
-if err := f.StartAt("a").EndAt("c").LimitToFirst(8).OrderBy("field").Value(&v); err != nil {
+if err := db.StartAt("a").EndAt("c").LimitToFirst(8).OrderBy("field").Value(&v); err != nil {
 	log.Fatal(err)
 }
 fmt.Printf("%s\n", v)
@@ -65,7 +65,7 @@ fmt.Printf("%s\n", v)
 
 ```go
 v := map[string]string{"foo":"bar"}
-if err := f.Set(v); err != nil {
+if err := db.Set(v); err != nil {
   log.Fatal(err)
 }
 ```
@@ -74,7 +74,7 @@ if err := f.Set(v); err != nil {
 
 ```go
 v := "bar"
-pushedFirego, err := f.Push(v)
+pushedFirego, err := db.Push(v)
 if err != nil {
 	log.Fatal(err)
 }
@@ -92,7 +92,7 @@ fmt.Printf("%s: %s\n", pushedFirego, bar)
 
 ```go
 v := map[string]string{"foo":"bar"}
-if err := f.Update(v); err != nil {
+if err := db.Update(v); err != nil {
   log.Fatal(err)
 }
 ```
@@ -100,7 +100,7 @@ if err := f.Update(v); err != nil {
 ### Remove Value
 
 ```go
-if err := f.Remove(); err != nil {
+if err := db.Remove(); err != nil {
   log.Fatal(err)
 }
 ```
@@ -109,11 +109,11 @@ if err := f.Remove(); err != nil {
 
 ```go
 notifications := make(chan firego.Event)
-if err := f.Watch(notifications); err != nil {
+if err := db.Watch(notifications); err != nil {
 	log.Fatal(err)
 }
 
-defer f.StopWatching()
+defer db.StopWatching()
 for event := range notifications {
 	fmt.Printf("Event %#v\n", event)
 }
