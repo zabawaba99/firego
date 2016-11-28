@@ -13,6 +13,7 @@ const Endpoint = "https://fcm.googleapis.com/fcm/send"
 // Messaing represents the Firebase Cloud Messaging service.
 type Messaing struct {
 	apiKey string
+	apiURL string
 	client *http.Client
 }
 
@@ -24,6 +25,7 @@ func New(apiKey string, client *http.Client) *Messaing {
 
 	return &Messaing{
 		apiKey: apiKey,
+		apiURL: Endpoint,
 		client: client,
 	}
 }
@@ -34,7 +36,7 @@ func (f *Messaing) Send(msg Message) (*Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", Endpoint, bytes.NewReader(b))
+	req, err := http.NewRequest("POST", f.apiURL, bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +117,6 @@ type Message struct {
 	// This means a FCM connection server can simultaneously store 4 different send-to-sync
 	// messages per client app. If you exceed this number, there is no guarantee which 4 collapse
 	// keys the FCM connection server will keep.
-
 	CollapseKey string `json:"collapse_key,omitempty"`
 
 	// Priority sets the priority of the message. Valid values are "normal" and "high."
