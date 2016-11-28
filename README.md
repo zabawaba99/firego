@@ -6,7 +6,7 @@
 This project containsa set of go packages to use Firebase.
 
 * [Realtime Database](database/README.md)
-* [Cloud Messaging](messaing/README.md)
+* [Cloud Messaging](messaging/README.md)
 
 Check the [GoDocs](http://godoc.org/gopkg.in/zabawaba99/firego.v2-unstable) or
 [Firebase Documentation](https://firebase.google.com/docs/) for more details

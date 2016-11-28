@@ -1,7 +1,7 @@
 # Database
 ---
 
-A Go package for the Firebase Realtime Database service.
+A Go package for the [Firebase Realtime Database](https://firebase.google.com/docs/database/) service.
 
 ## Installation
 
