@@ -177,6 +177,41 @@ func TestWatchAuthRevoked(t *testing.T) {
 	assert.Equal(t, event.Data, `"token expired"`, "event data does not match")
 }
 
+func TestWatch_Issue66(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		flusher, ok := w.(http.Flusher)
+		require.True(t, ok, "streaming unsupported")
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		flusher.Flush()
+	}))
+	defer server.Close()
+
+	// create an initial sse connection
+	fb := New(server.URL, nil)
+	notifications := make(chan Event)
+	err := fb.Watch(notifications)
+	require.NoError(t, err)
+
+	// read the first connection
+	<-notifications
+
+	// close the server connection and read the error event
+	go server.Close()
+	<-notifications
+
+	// call stop watching - everything should be a-ok
+	fb.StopWatching()
+
+	_, ok := <-notifications
+	assert.False(t, ok)
+}
+
 func TestStopWatch(t *testing.T) {
 	t.Parallel()
 
