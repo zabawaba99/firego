@@ -100,10 +100,7 @@ func (fb *Firebase) Watch(notifications chan Event) error {
 	}()
 
 	go func() {
-		defer func() {
-			close(notifications)
-			close(stop)
-		}()
+		defer close(notifications)
 
 		for event := range events {
 			if closedManually {
