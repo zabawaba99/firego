@@ -43,6 +43,7 @@ func (f *Messaing) Send(msg Message) (*Response, error) {
 	req.Header.Add("Authorization", fmt.Sprintf("key=%s", f.apiKey))
 	req.Header.Add("Content-Type", "application/json")
 
+	// TODO: https://developers.google.com/api-client-library/java/google-http-java-client/backoff
 	resp, err := f.client.Do(req)
 	if err != nil {
 		return nil, err
