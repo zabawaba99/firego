@@ -8,17 +8,17 @@ import (
 
 // StartAt creates a new Firebase reference with the
 // requested StartAt configuration. The value that is passed in
-// is automatically escape if it is a string value.
+// is automatically escaped if it is a string value.
 //
-//    StartAt(7)        // -> endAt=7
-//    StartAt("foo")    // -> endAt="foo"
-//    StartAt(`"foo"`)  // -> endAt="foo"
+//    StartAt(7)        // -> startAt=7
+//    StartAt("foo")    // -> startAt="foo"
+//    StartAt(`"foo"`)  // -> startAt="foo"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
-func (fb *Firebase) StartAt(value string) *Firebase {
+func (fb *Firebase) StartAt(value interface{}) *Firebase {
 	c := fb.copy()
 	if value != "" {
-		c.params.Set(startAtParam, escapeString(value))
+		c.params.Set(startAtParam, escapeParameter(value))
 	} else {
 		c.params.Del(startAtParam)
 	}
@@ -27,17 +27,17 @@ func (fb *Firebase) StartAt(value string) *Firebase {
 
 // EndAt creates a new Firebase reference with the
 // requested EndAt configuration. The value that is passed in
-// is automatically escape if it is a string value.
+// is automatically escaped if it is a string value.
 //
 //    EndAt(7)        // -> endAt=7
 //    EndAt("foo")    // -> endAt="foo"
 //    EndAt(`"foo"`)  // -> endAt="foo"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
-func (fb *Firebase) EndAt(value string) *Firebase {
+func (fb *Firebase) EndAt(value interface{}) *Firebase {
 	c := fb.copy()
 	if value != "" {
-		c.params.Set(endAtParam, escapeString(value))
+		c.params.Set(endAtParam, escapeParameter(value))
 	} else {
 		c.params.Del(endAtParam)
 	}
@@ -46,17 +46,17 @@ func (fb *Firebase) EndAt(value string) *Firebase {
 
 // OrderBy creates a new Firebase reference with the
 // requested OrderBy configuration. The value that is passed in
-// is automatically escape if it is a string value.
+// is automatically escaped.
 //
-//    OrderBy(7)       // -> endAt=7
-//    OrderBy("foo")   // -> endAt="foo"
-//    OrderBy(`"foo"`) // -> endAt="foo"
+//    OrderBy("foo")   // -> orderBy="foo"
+//    OrderBy(`"foo"`) // -> orderBy="foo"
+//    OrderBy("$key")  // -> orderBy="$key"
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
 func (fb *Firebase) OrderBy(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
-		c.params.Set(orderByParam, escapeString(value))
+		c.params.Set(orderByParam, escapeParameter(value))
 	} else {
 		c.params.Del(orderByParam)
 	}
@@ -66,24 +66,23 @@ func (fb *Firebase) OrderBy(value string) *Firebase {
 // EqualTo sends the query string equalTo so that one can find a single value
 //
 // Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
-func (fb *Firebase) EqualTo(value string) *Firebase {
+func (fb *Firebase) EqualTo(value interface{}) *Firebase {
 	c := fb.copy()
 	if value != "" {
-		c.params.Set(equalToParam, escapeString(value))
+		c.params.Set(equalToParam, escapeParameter(value))
 	} else {
 		c.params.Del(equalToParam)
 	}
 	return c
 }
 
-func escapeString(s string) string {
-	_, errNotInt := strconv.ParseInt(s, 10, 64)
-	_, errNotBool := strconv.ParseBool(s)
-	if errNotInt == nil || errNotBool == nil {
-		// we shouldn't escape bools or ints
-		return s
+func escapeParameter(s interface{}) string {
+	switch s.(type) {
+	case string:
+		return fmt.Sprintf(`%q`, strings.Trim(s.(string), `"`))
+	default:
+		return fmt.Sprintf(`%v`, s)
 	}
-	return fmt.Sprintf(`%q`, strings.Trim(s, `"`))
 }
 
 // LimitToFirst creates a new Firebase reference with the
