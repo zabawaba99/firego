@@ -64,6 +64,14 @@ func TestNewWithProvidedHttpClient(t *testing.T) {
 	}
 }
 
+func TestSetParams(t *testing.T) {
+	fb := New(URL, nil)
+	fb.SetParams("print", "silence")
+	fb.SetParams("shallow", "true")
+	expectedURL := fmt.Sprintf("%s/.json?print=silence&shallow=true", URL)
+	assert.Equal(t, fb.String(), expectedURL)
+}
+
 func TestAuth(t *testing.T) {
 	t.Parallel()
 	server := firetest.New()

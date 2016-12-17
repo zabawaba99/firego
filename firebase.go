@@ -105,6 +105,10 @@ func (fb *Firebase) Unauth() {
 	fb.params.Del(authParam)
 }
 
+func (fb *Firebase) SetParams(key, value string) {
+	fb.params.Set(key, value)
+}
+
 // Push creates a reference to an auto-generated child location.
 func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	bytes, err := json.Marshal(v)
