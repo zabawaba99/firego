@@ -111,6 +111,9 @@ func (fb *Firebase) SetRef(path string) {
 	if err != nil {
 		panic(err)
 	}
+	if strings.Index(path, "/") == 0 {
+		path = path[1:] // Remove prefix '/' if exists
+	}
 	fb.url = parsedURL.Scheme + "://" + parsedURL.Host + "/" + path
 }
 
