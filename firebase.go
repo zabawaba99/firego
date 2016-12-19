@@ -105,6 +105,11 @@ func (fb *Firebase) Unauth() {
 	fb.params.Del(authParam)
 }
 
+// Ref changes the current reference location.
+func (fb *Firebase) Ref(url string) {
+	fb.url = sanitizeURL(url)
+}
+
 // Push creates a reference to an auto-generated child location.
 func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	bytes, err := json.Marshal(v)
