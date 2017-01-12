@@ -27,6 +27,27 @@ func (fb *Firebase) StartAt(value string) *Firebase {
 	return c
 }
 
+// StartAtValue creates a new Firebase reference with the
+// requested StartAt configuration. The value that is passed in
+// is automatically escaped if it is a string value.
+// Numeric strings are preserved as strings.
+//
+//    StartAtValue(7)        // -> startAt=7
+//    StartAtValue("7")      // -> startAt="7"
+//    StartAtValue("foo")    // -> startAt="foo"
+//    StartAtValue(`"foo"`)  // -> startAt="foo"
+//
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
+func (fb *Firebase) StartAtValue(value interface{}) *Firebase {
+	c := fb.copy()
+	if value != "" {
+		c.params.Set(startAtParam, escapeParameter(value))
+	} else {
+		c.params.Del(startAtParam)
+	}
+	return c
+}
+
 // EndAt creates a new Firebase reference with the
 // requested EndAt configuration. The value that is passed in
 // is automatically escaped if it is a string value.
@@ -48,9 +69,30 @@ func (fb *Firebase) EndAt(value string) *Firebase {
 	return c
 }
 
+// EndAtValue creates a new Firebase reference with the
+// requested EndAt configuration. The value that is passed in
+// is automatically escaped if it is a string value.
+// Numeric strings are preserved as strings.
+//
+//    EndAtValue(7)        // -> endAt=7
+//    EndAtValue("7")      // -> endAt="7"
+//    EndAtValue("foo")    // -> endAt="foo"
+//    EndAtValue(`"foo"`)  // -> endAt="foo"
+//
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
+func (fb *Firebase) EndAtValue(value interface{}) *Firebase {
+	c := fb.copy()
+	if value != "" {
+		c.params.Set(endAtParam, escapeParameter(value))
+	} else {
+		c.params.Del(endAtParam)
+	}
+	return c
+}
+
 // OrderBy creates a new Firebase reference with the
 // requested OrderBy configuration. The value that is passed in
-// is automatically escape if it is a string value.
+// is automatically escaped if it is a string value.
 //
 //    OrderBy("foo")   // -> orderBy="foo"
 //    OrderBy(`"foo"`) // -> orderBy="foo"
@@ -82,6 +124,27 @@ func (fb *Firebase) EqualTo(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
 		c.params.Set(equalToParam, escapeString(value))
+	} else {
+		c.params.Del(equalToParam)
+	}
+	return c
+}
+
+// EqualToValue sends the query string equalTo so that one can find nodes with
+// exactly matching values. The value that is passed in is automatically escaped
+// if it is a string value.
+// Numeric strings are preserved as strings.
+//
+//    EqualToValue(7)        // -> equalTo=7
+//    EqualToValue("7")      // -> equalTo="7"
+//    EqualToValue("foo")    // -> equalTo="foo"
+//    EqualToValue(`"foo"`)  // -> equalTo="foo"
+//
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
+func (fb *Firebase) EqualToValue(value interface{}) *Firebase {
+	c := fb.copy()
+	if value != "" {
+		c.params.Set(equalToParam, escapeParameter(value))
 	} else {
 		c.params.Del(equalToParam)
 	}

@@ -60,6 +60,34 @@ func TestEqualTo(t *testing.T) {
 	assert.Equal(t, equalToParam+"=%22user_id%22", req.URL.Query().Encode())
 }
 
+func TestEqualToValue(t *testing.T) {
+	t.Parallel()
+	var (
+		server = newTestServer("")
+		fb     = New(server.URL, nil)
+	)
+	defer server.Close()
+
+	fb.EqualToValue(2).Value("")
+	fb.EqualToValue("2").Value("")
+	fb.EqualToValue(2.14).Value("")
+	fb.EqualToValue("bar").Value("")
+	require.Len(t, server.receivedReqs, 4)
+
+	req := server.receivedReqs[0]
+	assert.Equal(t, equalToParam+"=2", req.URL.Query().Encode())
+
+	req = server.receivedReqs[1]
+	assert.Equal(t, equalToParam+"=%222%22", req.URL.Query().Encode())
+
+	req = server.receivedReqs[2]
+	assert.Equal(t, equalToParam+"=2.14", req.URL.Query().Encode())
+
+	req = server.receivedReqs[3]
+	assert.Equal(t, equalToParam+"=%22bar%22", req.URL.Query().Encode())
+
+}
+
 func TestLimitToFirst(t *testing.T) {
 	t.Parallel()
 	var (
@@ -109,6 +137,33 @@ func TestStartAt(t *testing.T) {
 	assert.Equal(t, startAtParam+"=%22foo%22", req.URL.Query().Encode())
 }
 
+func TestStartAtValue(t *testing.T) {
+	t.Parallel()
+	var (
+		server = newTestServer("")
+		fb     = New(server.URL, nil)
+	)
+	defer server.Close()
+
+	fb.StartAtValue(3).Value("")
+	fb.StartAtValue("3").Value("")
+	fb.StartAtValue(3.14).Value("")
+	fb.StartAtValue("foo").Value("")
+	require.Len(t, server.receivedReqs, 4)
+
+	req := server.receivedReqs[0]
+	assert.Equal(t, startAtParam+"=3", req.URL.Query().Encode())
+
+	req = server.receivedReqs[1]
+	assert.Equal(t, startAtParam+"=%223%22", req.URL.Query().Encode())
+
+	req = server.receivedReqs[2]
+	assert.Equal(t, startAtParam+"=3.14", req.URL.Query().Encode())
+
+	req = server.receivedReqs[3]
+	assert.Equal(t, startAtParam+"=%22foo%22", req.URL.Query().Encode())
+}
+
 func TestEndAt(t *testing.T) {
 	t.Parallel()
 	var (
@@ -125,6 +180,33 @@ func TestEndAt(t *testing.T) {
 	assert.Equal(t, endAtParam+"=4", req.URL.Query().Encode())
 
 	req = server.receivedReqs[1]
+	assert.Equal(t, endAtParam+"=%22theend%22", req.URL.Query().Encode())
+}
+
+func TestEndAtValue(t *testing.T) {
+	t.Parallel()
+	var (
+		server = newTestServer("")
+		fb     = New(server.URL, nil)
+	)
+	defer server.Close()
+
+	fb.EndAtValue(4).Value("")
+	fb.EndAtValue(3.14).Value("")
+	fb.EndAtValue("4").Value("")
+	fb.EndAtValue("theend").Value("")
+	require.Len(t, server.receivedReqs, 4)
+
+	req := server.receivedReqs[0]
+	assert.Equal(t, endAtParam+"=4", req.URL.Query().Encode())
+
+	req = server.receivedReqs[1]
+	assert.Equal(t, endAtParam+"=3.14", req.URL.Query().Encode())
+
+	req = server.receivedReqs[2]
+	assert.Equal(t, endAtParam+"=%224%22", req.URL.Query().Encode())
+
+	req = server.receivedReqs[3]
 	assert.Equal(t, endAtParam+"=%22theend%22", req.URL.Query().Encode())
 }
 
