@@ -181,3 +181,22 @@ func TestEscapeString(t *testing.T) {
 		assert.Equal(t, testCase.expected, escapeString(testCase.value))
 	}
 }
+
+func TestEscapeParameter(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		value    interface{}
+		expected string
+	}{
+		{"foo", `"foo"`},
+		{2, `2`},
+		{"3", `"3"`},
+		{true, `true`},
+		{"false", `"false"`},
+		{3.14, `3.14`},
+	}
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.expected, escapeParameter(testCase.value))
+	}
+}

@@ -86,6 +86,15 @@ func escapeString(s string) string {
 	return fmt.Sprintf(`%q`, strings.Trim(s, `"`))
 }
 
+func escapeParameter(s interface{}) string {
+	switch s.(type) {
+	case string:
+		return fmt.Sprintf(`%q`, strings.Trim(s.(string), `"`))
+	default:
+		return fmt.Sprintf(`%v`, s)
+	}
+}
+
 // LimitToFirst creates a new Firebase reference with the
 // requested limitToFirst configuration.
 //
