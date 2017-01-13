@@ -8,13 +8,15 @@ import (
 
 // StartAt creates a new Firebase reference with the
 // requested StartAt configuration. The value that is passed in
-// is automatically escape if it is a string value.
+// is automatically escaped if it is a string value.
+// Numeric strings are automatically converted to numbers.
 //
-//    StartAt(7)        // -> endAt=7
-//    StartAt("foo")    // -> endAt="foo"
-//    StartAt(`"foo"`)  // -> endAt="foo"
+//    StartAt(7)        // -> startAt=7
+//    StartAt("7")      // -> startAt=7
+//    StartAt("foo")    // -> startAt="foo"
+//    StartAt(`"foo"`)  // -> startAt="foo"
 //
-// Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
 func (fb *Firebase) StartAt(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
@@ -25,15 +27,38 @@ func (fb *Firebase) StartAt(value string) *Firebase {
 	return c
 }
 
+// StartAtValue creates a new Firebase reference with the
+// requested StartAt configuration. The value that is passed in
+// is automatically escaped if it is a string value.
+// Numeric strings are preserved as strings.
+//
+//    StartAtValue(7)        // -> startAt=7
+//    StartAtValue("7")      // -> startAt="7"
+//    StartAtValue("foo")    // -> startAt="foo"
+//    StartAtValue(`"foo"`)  // -> startAt="foo"
+//
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
+func (fb *Firebase) StartAtValue(value interface{}) *Firebase {
+	c := fb.copy()
+	if value != "" {
+		c.params.Set(startAtParam, escapeParameter(value))
+	} else {
+		c.params.Del(startAtParam)
+	}
+	return c
+}
+
 // EndAt creates a new Firebase reference with the
 // requested EndAt configuration. The value that is passed in
-// is automatically escape if it is a string value.
+// is automatically escaped if it is a string value.
+// Numeric strings are automatically converted to numbers.
 //
 //    EndAt(7)        // -> endAt=7
+//    EndAt("7")      // -> endAt=7
 //    EndAt("foo")    // -> endAt="foo"
 //    EndAt(`"foo"`)  // -> endAt="foo"
 //
-// Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
 func (fb *Firebase) EndAt(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
@@ -44,15 +69,36 @@ func (fb *Firebase) EndAt(value string) *Firebase {
 	return c
 }
 
+// EndAtValue creates a new Firebase reference with the
+// requested EndAt configuration. The value that is passed in
+// is automatically escaped if it is a string value.
+// Numeric strings are preserved as strings.
+//
+//    EndAtValue(7)        // -> endAt=7
+//    EndAtValue("7")      // -> endAt="7"
+//    EndAtValue("foo")    // -> endAt="foo"
+//    EndAtValue(`"foo"`)  // -> endAt="foo"
+//
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
+func (fb *Firebase) EndAtValue(value interface{}) *Firebase {
+	c := fb.copy()
+	if value != "" {
+		c.params.Set(endAtParam, escapeParameter(value))
+	} else {
+		c.params.Del(endAtParam)
+	}
+	return c
+}
+
 // OrderBy creates a new Firebase reference with the
 // requested OrderBy configuration. The value that is passed in
-// is automatically escape if it is a string value.
+// is automatically escaped if it is a string value.
 //
-//    OrderBy(7)       // -> endAt=7
-//    OrderBy("foo")   // -> endAt="foo"
-//    OrderBy(`"foo"`) // -> endAt="foo"
+//    OrderBy("foo")   // -> orderBy="foo"
+//    OrderBy(`"foo"`) // -> orderBy="foo"
+//    OrderBy("$key")  // -> orderBy="$key"
 //
-// Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#orderby
 func (fb *Firebase) OrderBy(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
@@ -63,13 +109,42 @@ func (fb *Firebase) OrderBy(value string) *Firebase {
 	return c
 }
 
-// EqualTo sends the query string equalTo so that one can find a single value
+// EqualTo sends the query string equalTo so that one can find nodes with
+// exactly matching values. The value that is passed in is automatically escaped
+// if it is a string value.
+// Numeric strings are automatically converted to numbers.
 //
-// Reference https://www.firebase.com/docs/rest/guide/retrieving-data.html#section-rest-filtering
+//    EqualTo(7)        // -> equalTo=7
+//    EqualTo("7")      // -> equalTo=7
+//    EqualTo("foo")    // -> equalTo="foo"
+//    EqualTo(`"foo"`)  // -> equalTo="foo"
+//
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
 func (fb *Firebase) EqualTo(value string) *Firebase {
 	c := fb.copy()
 	if value != "" {
 		c.params.Set(equalToParam, escapeString(value))
+	} else {
+		c.params.Del(equalToParam)
+	}
+	return c
+}
+
+// EqualToValue sends the query string equalTo so that one can find nodes with
+// exactly matching values. The value that is passed in is automatically escaped
+// if it is a string value.
+// Numeric strings are preserved as strings.
+//
+//    EqualToValue(7)        // -> equalTo=7
+//    EqualToValue("7")      // -> equalTo="7"
+//    EqualToValue("foo")    // -> equalTo="foo"
+//    EqualToValue(`"foo"`)  // -> equalTo="foo"
+//
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
+func (fb *Firebase) EqualToValue(value interface{}) *Firebase {
+	c := fb.copy()
+	if value != "" {
+		c.params.Set(equalToParam, escapeParameter(value))
 	} else {
 		c.params.Del(equalToParam)
 	}
@@ -86,10 +161,19 @@ func escapeString(s string) string {
 	return fmt.Sprintf(`%q`, strings.Trim(s, `"`))
 }
 
+func escapeParameter(s interface{}) string {
+	switch s.(type) {
+	case string:
+		return fmt.Sprintf(`%q`, strings.Trim(s.(string), `"`))
+	default:
+		return fmt.Sprintf(`%v`, s)
+	}
+}
+
 // LimitToFirst creates a new Firebase reference with the
 // requested limitToFirst configuration.
 //
-// Reference https://www.firebase.com/docs/rest/api/#section-param-query
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#limit-queries
 func (fb *Firebase) LimitToFirst(value int64) *Firebase {
 	c := fb.copy()
 	if value > 0 {
@@ -103,7 +187,7 @@ func (fb *Firebase) LimitToFirst(value int64) *Firebase {
 // LimitToLast creates a new Firebase reference with the
 // requested limitToLast configuration.
 //
-// Reference https://www.firebase.com/docs/rest/api/#section-param-query
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#limit-queries
 func (fb *Firebase) LimitToLast(value int64) *Firebase {
 	c := fb.copy()
 	if value > 0 {
@@ -119,7 +203,7 @@ func (fb *Firebase) LimitToLast(value int64) *Firebase {
 // its value will be returned. If the data is a JSON object, the values
 // for each key will be truncated to true.
 //
-// Reference https://www.firebase.com/docs/rest/api/#section-param-shallow
+// Reference https://firebase.google.com/docs/database/rest/retrieve-data#shallow
 func (fb *Firebase) Shallow(v bool) {
 	if v {
 		fb.params.Set(shallowParam, "true")
