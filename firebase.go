@@ -112,7 +112,7 @@ func (fb *Firebase) Ref(path string) *Firebase {
 	if err != nil {
 		panic(err)
 	}
-	newFB.url = parsedURL.Scheme + "://" + parsedURL.Host + "/" + strings.TrimPrefix(path, "/")
+	newFB.url = parsedURL.Scheme + "://" + parsedURL.Host + "/" + strings.Trim(path, "/")
 	return newFB
 }
 
