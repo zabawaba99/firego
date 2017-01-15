@@ -105,16 +105,12 @@ func (fb *Firebase) Unauth() {
 	fb.params.Del(authParam)
 }
 
-// SetRef changes the current reference location whilst keeping the host url.
-func (fb *Firebase) SetRef(path string) {
-	parsedURL, err := _url.Parse(fb.url)
-	if err != nil {
-		panic(err)
-	}
-	if strings.Index(path, "/") == 0 {
-		path = path[1:] // Remove prefix '/' if exists
-	}
-	fb.url = parsedURL.Scheme + "://" + parsedURL.Host + "/" + path
+// Ref returns a copy of an existing Firebase reference with a new path.
+func (fb *Firebase) Ref(path string) *Firebase {
+	newFB := fb.copy()
+	url := strings.TrimPrefix(path, "/")
+	newFB.url = sanitizeURL(url)
+	return newFB
 }
 
 // SetURL changes the url for a firebase reference.
