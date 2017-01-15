@@ -105,6 +105,22 @@ func (fb *Firebase) Unauth() {
 	fb.params.Del(authParam)
 }
 
+// Ref returns a copy of an existing Firebase reference with a new path.
+func (fb *Firebase) Ref(path string) (*Firebase, error) {
+	newFB := fb.copy()
+	parsedURL, err := _url.Parse(fb.url)
+	if err != nil {
+		return newFB, err
+	}
+	newFB.url = parsedURL.Scheme + "://" + parsedURL.Host + "/" + strings.Trim(path, "/")
+	return newFB, nil
+}
+
+// SetURL changes the url for a firebase reference.
+func (fb *Firebase) SetURL(url string) {
+	fb.url = sanitizeURL(url)
+}
+
 // Push creates a reference to an auto-generated child location.
 func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	bytes, err := json.Marshal(v)
