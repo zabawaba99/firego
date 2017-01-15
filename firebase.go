@@ -105,6 +105,15 @@ func (fb *Firebase) Unauth() {
 	fb.params.Del(authParam)
 }
 
+// SetRef changes the current reference location whilst keeping the host url.
+func (fb *Firebase) SetRef(path string) error {
+	parsedURL, err := _url.Parse(fb.url)
+	if err != nil {
+		return err
+	}
+	fb.url = parsedURL.Scheme + "://" + parsedURL.Host + "/" + strings.Trim(path, "/")
+}
+
 // Push creates a reference to an auto-generated child location.
 func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	bytes, err := json.Marshal(v)
