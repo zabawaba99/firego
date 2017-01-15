@@ -108,8 +108,11 @@ func (fb *Firebase) Unauth() {
 // Ref returns a copy of an existing Firebase reference with a new path.
 func (fb *Firebase) Ref(path string) *Firebase {
 	newFB := fb.copy()
-	url := strings.TrimPrefix(path, "/")
-	newFB.url = sanitizeURL(url)
+	parsedURL, err := _url.Parse(fb.url)
+	if err != nil {
+		panic(err)
+	}
+	newFB.url = parsedURL.Scheme + "://" + parsedURL.Host + "/" + strings.TrimPrefix(path, "/")
 	return newFB
 }
 
