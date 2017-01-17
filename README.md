@@ -137,7 +137,8 @@ You can use a reference to save or read data from a specified reference
 
 ```go
 userID := "bar"
-if usersRef,err := f.Ref("users/"+userID); err != nil {
+usersRef,err := f.Ref("users/"+userID)
+if err != nil {
   log.Fatal(err)
 }
 v := map[string]string{"id":userID}
