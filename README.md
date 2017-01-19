@@ -131,6 +131,22 @@ for event := range notifications {
 }
 fmt.Printf("Notifications have stopped")
 ```
+### Change reference
+
+You can use a reference to save or read data from a specified reference
+
+```go
+userID := "bar"
+usersRef,err := f.Ref("users/"+userID)
+if err != nil {
+  log.Fatal(err)
+}
+v := map[string]string{"id":userID}
+if err := usersRef.Set(v); err != nil {
+  log.Fatal(err)
+}
+
+```
 
 Check the [GoDocs](http://godoc.org/gopkg.in/zabawaba99/firego.v1) or
 [Firebase Documentation](https://www.firebase.com/docs/rest/) for more details
