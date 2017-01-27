@@ -116,6 +116,16 @@ func (fb *Firebase) Ref(path string) (*Firebase, error) {
 	return newFB, nil
 }
 
+// Exists returns a boolean indicating if a value exist at the current reference
+func (fb *Firebase) Exists() (bool, error) {
+	var data interface{}
+	err := fb.Value(&data)
+	if err != nil {
+		return false, err
+	}
+	return data != nil, nil
+}
+
 // SetURL changes the url for a firebase reference.
 func (fb *Firebase) SetURL(url string) {
 	fb.url = sanitizeURL(url)
