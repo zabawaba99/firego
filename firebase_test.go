@@ -104,14 +104,14 @@ func TestExists(t *testing.T) {
 	// Test Exist on an empty ref
 	b, err := fb.Exists()
 	require.NoError(t, err)
-	assert.Equal(t, false, b)
+	assert.False(t, b)
 
 	//Test Exists on an non-empty ref
 	payload := map[string]interface{}{"foo": "bar"}
 	fb.Push(payload)
 	b, err = fb.Exists()
 	require.NoError(t, err)
-	assert.Equal(t, true, b)
+	assert.True(t, b)
 
 }
 
