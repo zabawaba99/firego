@@ -73,6 +73,7 @@ if err := f.StartAt("a").EndAt("c").LimitToFirst(8).OrderBy("field").Value(&v); 
 fmt.Printf("%s\n", v)
 ```
 
+
 ### Set Value
 
 ```go
@@ -146,6 +147,25 @@ if err := usersRef.Set(v); err != nil {
   log.Fatal(err)
 }
 
+```
+
+### Check if a value exists
+
+```go
+userID := "bar"
+userRef, err := f.Ref("users/"+userID)
+if err := nil {
+  log.Fatal(err)
+}
+ok,err := userRef.Exists()
+if err != nil {
+  log.Fatal(err)
+}
+if ok {
+  fmt.Println("User exists")
+} else {
+  fmt.Println("User doesn't exists")
+}
 ```
 
 Check the [GoDocs](http://godoc.org/gopkg.in/zabawaba99/firego.v1) or

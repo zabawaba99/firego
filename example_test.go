@@ -122,6 +122,25 @@ func ExampleFirebase_Value() {
 	log.Printf("My value %v\n", v)
 }
 
+func ExampleFirebase_Exists() {
+	fb := firego.New("https://someapp.firebaseio.com/some/value", nil)
+	//Check if a user exist
+	userID := "bar"
+	userRef, err := fb.Ref("users/" + userID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ok, err := userRef.Exists()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if ok {
+		log.Println("User exists")
+	} else {
+		log.Println("User doesn't exists")
+	}
+}
+
 func ExampleFirebase_Watch() {
 	fb := firego.New("https://someapp.firebaseio.com/some/value", nil)
 	notifications := make(chan firego.Event)
