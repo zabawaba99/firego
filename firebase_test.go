@@ -94,6 +94,27 @@ func TestUnauth(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestExists(t *testing.T) {
+	t.Parallel()
+	server := firetest.New()
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil)
+	// Test Exist on an empty ref
+	b, err := fb.Exists()
+	require.NoError(t, err)
+	assert.False(t, b)
+
+	//Test Exists on an non-empty ref
+	payload := map[string]interface{}{"foo": "bar"}
+	fb.Push(payload)
+	b, err = fb.Exists()
+	require.NoError(t, err)
+	assert.True(t, b)
+
+}
+
 func TestPush(t *testing.T) {
 	t.Parallel()
 	var (
