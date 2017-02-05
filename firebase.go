@@ -118,12 +118,15 @@ func (fb *Firebase) Ref(path string) (*Firebase, error) {
 
 // Exists returns a boolean indicating if a value exist at the current reference
 func (fb *Firebase) Exists() (bool, error) {
-	var data interface{}
-	err := fb.Value(&data)
+	bytes, err := fb.doRequest("GET", nil)
+
 	if err != nil {
 		return false, err
 	}
-	return data != nil, nil
+
+	// If the searched reference doesn't exists, bytes contains an empty json "{}" where the double quotes are also
+	// and a new line character are also part of the response.
+	return len(bytes) > 5, nil
 }
 
 // SetURL changes the url for a firebase reference.
