@@ -188,6 +188,21 @@ func (fb *Firebase) Value(v interface{}) error {
 	return json.Unmarshal(bytes, v)
 }
 
+// Exists checks if a value of the Firebase reference exists. It returns (true, nil), if the value exists. If the value
+// doesn't exists it return false, nil. Also, in case of error during the call it returns the error, therefore the
+// boolean value should be ignored.
+func (fb *Firebase) Exists() (bool, error) {
+	bytes, err := fb.doRequest("GET", nil)
+
+	if err != nil {
+		return false, err
+	}
+	
+	// if the searched reference doesn't exists, bytes contains an empty json, the double quotes are also part of
+	// the response "{}" and a new line character.
+	return len(bytes) > 5, nil
+}
+
 // String returns the string representation of the
 // Firebase reference.
 func (fb *Firebase) String() string {
