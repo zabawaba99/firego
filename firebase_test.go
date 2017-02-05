@@ -167,6 +167,46 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, payload, v)
 }
 
+func TestExists(t *testing.T) {
+	t.Parallel()
+	var (
+		response = map[string]interface{}{"foo": "bar"}
+		server   = firetest.New()
+		v        = map[string]interface{}{}
+	)
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil)
+	server.Set("", response)
+
+	fb.Value(&v)
+
+	exists, err := fb.Exists()
+	assert.NoError(t, err)
+	assert.Equal(t, true, exists)
+}
+
+func TestNotExists(t *testing.T) {
+	t.Parallel()
+	var (
+		response = "{}"
+		server   = firetest.New()
+		v        = map[string]interface{}{}
+	)
+	server.Start()
+	defer server.Close()
+
+	fb := New(server.URL, nil)
+	server.Set("", response)
+
+	fb.Value(&v)
+
+	exists, err := fb.Exists()
+	assert.NoError(t, err)
+	assert.Equal(t, false, exists)
+}
+
 func TestValue(t *testing.T) {
 	t.Parallel()
 	var (
