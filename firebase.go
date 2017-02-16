@@ -269,7 +269,16 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 	default:
 		return nil, err
 	case nil:
-		// carry on
+		// check for 307 redirect
+		if resp.StatusCode == http.StatusTemporaryRedirect {
+			loc, err := resp.Location()
+			if err != nil {
+				return nil, err
+			}
+
+			fb.url = strings.Split(loc.String(), "/.json")[0]
+			return fb.doRequest(method, body)
+		}
 
 	case *_url.Error:
 		// `http.Client.Do` will return a `url.Error` that wraps a `net.Error`
