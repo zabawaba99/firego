@@ -44,7 +44,7 @@ firego.TimeoutDuration = time.Minute
 ### Authentication
 
 You can authenticate with your `service_account.json` file by using the
-`golang.org/x/oauth2` package
+`golang.org/x/oauth2` package (thanks @m00sey for the snippet)
 
 ```go
 d, err := ioutil.ReadFile("our_service_account.json")
