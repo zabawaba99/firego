@@ -41,7 +41,28 @@ timeout duration
 firego.TimeoutDuration = time.Minute
 ```
 
-### Auth Tokens
+### Authentication
+
+You can authenticate with your `service_account.json` file by using the
+`golang.org/x/oauth2` package
+
+```go
+d, err := ioutil.ReadFile("our_service_account.json")
+if err != nil {
+    return nil, err
+}
+
+conf, err := google.JWTConfigFromJSON(d, "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/firebase.database")
+if err != nil {
+    return nil, err
+}
+
+fb := firego.New("https://you.firebaseio.com", conf.Client(oauth2.NoContext))
+// use the authenticated fb instance
+```
+
+### Legacy Tokens
 
 ```go
 f.Auth("some-token-that-was-created-for-me")
