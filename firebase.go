@@ -121,6 +121,11 @@ func (fb *Firebase) SetURL(url string) {
 	fb.url = sanitizeURL(url)
 }
 
+// URL returns firebase reference URL
+func (fb *Firebase) URL() string {
+	return fb.url
+}
+
 // Push creates a reference to an auto-generated child location.
 func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	bytes, err := json.Marshal(v)
