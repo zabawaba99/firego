@@ -76,7 +76,6 @@ func New(url string, client *http.Client) *Firebase {
 	if client == nil {
 		var tr *http.Transport
 		tr = &http.Transport{
-			DisableKeepAlives: true, // https://code.google.com/p/go/issues/detail?id=3514
 			Dial: func(network, address string) (net.Conn, error) {
 				start := time.Now()
 				c, err := net.DialTimeout(network, address, fb.clientTimeout)
