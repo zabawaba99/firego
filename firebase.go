@@ -301,7 +301,7 @@ func (fb *Firebase) doRequest(method string, body []byte, options ...func(*http.
 		return nil, nil, err
 	}
 	if resp.StatusCode/200 != 1 {
-		return nil, nil, errors.New(string(respBody))
+		return resp.Header, respBody, errors.New(string(respBody))
 	}
 	return resp.Header, respBody, nil
 }
