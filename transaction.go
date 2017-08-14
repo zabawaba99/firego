@@ -4,43 +4,24 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 )
 
 // TransactionFn is used to run a transaction on a Firebase reference.
 // See Firebase.Transaction for more information.
 type TransactionFn func(currentSnapshot interface{}) (result interface{}, err error)
 
-func (fb *Firebase) runTransaction(fn TransactionFn) error {
-	// fetch etag and current value
-	headers, body, err := fb.doRequest("GET", nil, withHeader("X-Firebase-ETag", "true"))
-	if err != nil {
-		return err
-	}
-
-	etag := headers.Get("ETag")
+func getTransactionParams(headers http.Header, body []byte) (etag string, snapshot interface{}, err error) {
+	etag = headers.Get("ETag")
 	if len(etag) == 0 {
-		return errors.New("no etag returned by Firebase")
+		return etag, snapshot, errors.New("no etag returned by Firebase")
 	}
 
-	var currentSnapshot interface{}
-	if err := json.Unmarshal(body, &currentSnapshot); err != nil {
-		return fmt.Errorf("failed to unmarshal Firebase response. %s", err)
+	if err := json.Unmarshal(body, &snapshot); err != nil {
+		return etag, snapshot, fmt.Errorf("failed to unmarshal Firebase response. %s", err)
 	}
 
-	// run transaction
-	result, err := fn(currentSnapshot)
-	if err != nil {
-		return err
-	}
-
-	newBody, err := json.Marshal(result)
-	if err != nil {
-		return fmt.Errorf("failed to marshal transaction result. %s", err)
-	}
-
-	// attempt to update it
-	_, _, err = fb.doRequest("POST", newBody, withHeader("if-match", etag))
-	return err
+	return etag, snapshot, nil
 }
 
 // Transaction runs a transaction on the data at this location. The TransactionFn parameter
@@ -53,14 +34,49 @@ func (fb *Firebase) runTransaction(fn TransactionFn) error {
 //
 // Best practices for this method are to rely only on the data that is passed in.
 func (fb *Firebase) Transaction(fn TransactionFn) error {
-	err := fb.runTransaction(fn)
-	// TODO: maybe this should be configurable - should we have a limit?
-	for i := 0; i < 10 && err != nil; i++ {
-		err = fb.runTransaction(fn)
+	// fetch etag and current value
+	headers, body, err := fb.doRequest("GET", nil, withHeader("X-Firebase-ETag", "true"))
+	if err != nil {
+		return err
 	}
 
+	etag, snapshot, err := getTransactionParams(headers, body)
 	if err != nil {
-		return fmt.Errorf("failed to run transaction. %s", err)
+		return err
+	}
+
+	// set the error value to something non-nil so that
+	// we step into the loop
+	tErr := errors.New("")
+	for i := 0; i < 25 && tErr != nil; i++ {
+		// run transaction
+		result, err := fn(snapshot)
+		if err != nil {
+			return nil
+		}
+
+		newBody, err := json.Marshal(result)
+		if err != nil {
+			return fmt.Errorf("failed to marshal transaction result. %s", err)
+		}
+
+		// attempt to update it
+		headers, body, tErr = fb.doRequest("PUT", newBody, withHeader("if-match", etag))
+		if tErr == nil {
+			// we're good, break to loop
+			break
+		}
+
+		// we failed to update, so grab the new snapshot/etag
+		e, s, tErr := getTransactionParams(headers, body)
+		if tErr != nil {
+			return tErr
+		}
+		etag, snapshot = e, s
+	}
+
+	if tErr != nil {
+		return fmt.Errorf("failed to run transaction. %s", tErr)
 	}
 	return nil
 }
