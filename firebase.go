@@ -131,7 +131,7 @@ func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 	if err != nil {
 		return nil, err
 	}
-	bytes, err = fb.doRequest("POST", bytes)
+	_, bytes, err = fb.doRequest("POST", bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (fb *Firebase) Push(v interface{}) (*Firebase, error) {
 
 // Remove the Firebase reference from the cloud.
 func (fb *Firebase) Remove() error {
-	_, err := fb.doRequest("DELETE", nil)
+	_, _, err := fb.doRequest("DELETE", nil)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func (fb *Firebase) Set(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	_, err = fb.doRequest("PUT", bytes)
+	_, _, err = fb.doRequest("PUT", bytes)
 	return err
 }
 
@@ -169,13 +169,13 @@ func (fb *Firebase) Update(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	_, err = fb.doRequest("PATCH", bytes)
+	_, _, err = fb.doRequest("PATCH", bytes)
 	return err
 }
 
 // Value gets the value of the Firebase reference.
 func (fb *Firebase) Value(v interface{}) error {
-	bytes, err := fb.doRequest("GET", nil)
+	_, bytes, err := fb.doRequest("GET", nil)
 	if err != nil {
 		return err
 	}
@@ -252,16 +252,26 @@ func redirectPreserveHeaders(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
+func withHeader(key, value string) func(*http.Request) {
+	return func(req *http.Request) {
+		req.Header.Add(key, value)
+	}
+}
+
+func (fb *Firebase) doRequest(method string, body []byte, options ...func(*http.Request)) (http.Header, []byte, error) {
 	req, err := http.NewRequest(method, fb.String(), bytes.NewReader(body))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	for _, opt := range options {
+		opt(req)
 	}
 
 	resp, err := fb.client.Do(req)
 	switch err := err.(type) {
 	default:
-		return nil, err
+		return nil, nil, err
 	case nil:
 		// carry on
 
@@ -270,28 +280,28 @@ func (fb *Firebase) doRequest(method string, body []byte) ([]byte, error) {
 		// when exceeding it's `Transport`'s `ResponseHeadersTimeout`
 		e1, ok := err.Err.(net.Error)
 		if ok && e1.Timeout() {
-			return nil, ErrTimeout{err}
+			return nil, nil, ErrTimeout{err}
 		}
 
-		return nil, err
+		return nil, nil, err
 
 	case net.Error:
 		// `http.Client.Do` will return a `net.Error` directly when Dial times
 		// out, or when the Client's RoundTripper otherwise returns an err
 		if err.Timeout() {
-			return nil, ErrTimeout{err}
+			return nil, nil, ErrTimeout{err}
 		}
 
-		return nil, err
+		return nil, nil, err
 	}
 
 	defer resp.Body.Close()
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if resp.StatusCode/200 != 1 {
-		return nil, errors.New(string(respBody))
+		return resp.Header, respBody, errors.New(string(respBody))
 	}
-	return respBody, nil
+	return resp.Header, respBody, nil
 }
