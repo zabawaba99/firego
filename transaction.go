@@ -63,7 +63,7 @@ func (fb *Firebase) Transaction(fn TransactionFn) error {
 		// attempt to update it
 		headers, body, tErr = fb.doRequest("PUT", newBody, withHeader("if-match", etag))
 		if tErr == nil {
-			// we're good, break to loop
+			// we're good, break the loop
 			break
 		}
 
