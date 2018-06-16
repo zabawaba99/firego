@@ -49,9 +49,11 @@ const defaultHeartbeat = 2 * time.Minute
 // Firebase represents a location in the cloud.
 type Firebase struct {
 	url           string
-	params        _url.Values
 	client        *http.Client
 	clientTimeout time.Duration
+
+	paramsMtx sync.RWMutex
+	params    _url.Values
 
 	eventMtx   sync.Mutex
 	eventFuncs map[string]chan struct{}
@@ -96,12 +98,16 @@ func New(url string, client *http.Client) *Firebase {
 
 // Auth sets the custom Firebase token used to authenticate to Firebase.
 func (fb *Firebase) Auth(token string) {
+	fb.paramsMtx.Lock()
 	fb.params.Set(authParam, token)
+	fb.paramsMtx.Unlock()
 }
 
 // Unauth removes the current token being used to authenticate to Firebase.
 func (fb *Firebase) Unauth() {
+	fb.paramsMtx.Lock()
 	fb.params.Del(authParam)
+	fb.paramsMtx.Unlock()
 }
 
 // Ref returns a copy of an existing Firebase reference with a new path.
@@ -187,9 +193,11 @@ func (fb *Firebase) Value(v interface{}) error {
 func (fb *Firebase) String() string {
 	path := fb.url + "/.json"
 
+	fb.paramsMtx.RLock()
 	if len(fb.params) > 0 {
 		path += "?" + fb.params.Encode()
 	}
+	fb.paramsMtx.RUnlock()
 	return path
 }
 
@@ -214,9 +222,11 @@ func (fb *Firebase) copy() *Firebase {
 
 	// making sure to manually copy the map items into a new
 	// map to avoid modifying the map reference.
+	fb.paramsMtx.RLock()
 	for k, v := range fb.params {
 		c.params[k] = v
 	}
+	fb.paramsMtx.RUnlock()
 	return c
 }
 

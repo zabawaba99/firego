@@ -19,6 +19,8 @@ import (
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
 func (fb *Firebase) StartAt(value string) *Firebase {
 	c := fb.copy()
+	// explicitly not locking here because no one else can
+	// modify this value before we return it.
 	if value != "" {
 		c.params.Set(startAtParam, escapeString(value))
 	} else {
@@ -40,6 +42,8 @@ func (fb *Firebase) StartAt(value string) *Firebase {
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
 func (fb *Firebase) StartAtValue(value interface{}) *Firebase {
 	c := fb.copy()
+	// explicitly not locking here because no one else can
+	// modify this value before we return it.
 	if value != "" {
 		c.params.Set(startAtParam, escapeParameter(value))
 	} else {
@@ -61,6 +65,8 @@ func (fb *Firebase) StartAtValue(value interface{}) *Firebase {
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
 func (fb *Firebase) EndAt(value string) *Firebase {
 	c := fb.copy()
+	// explicitly not locking here because no one else can
+	// modify this value before we return it.
 	if value != "" {
 		c.params.Set(endAtParam, escapeString(value))
 	} else {
@@ -82,6 +88,8 @@ func (fb *Firebase) EndAt(value string) *Firebase {
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
 func (fb *Firebase) EndAtValue(value interface{}) *Firebase {
 	c := fb.copy()
+	// explicitly not locking here because no one else can
+	// modify this value before we return it.
 	if value != "" {
 		c.params.Set(endAtParam, escapeParameter(value))
 	} else {
@@ -101,6 +109,8 @@ func (fb *Firebase) EndAtValue(value interface{}) *Firebase {
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#orderby
 func (fb *Firebase) OrderBy(value string) *Firebase {
 	c := fb.copy()
+	// explicitly not locking here because no one else can
+	// modify this value before we return it.
 	if value != "" {
 		c.params.Set(orderByParam, escapeString(value))
 	} else {
@@ -122,6 +132,8 @@ func (fb *Firebase) OrderBy(value string) *Firebase {
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
 func (fb *Firebase) EqualTo(value string) *Firebase {
 	c := fb.copy()
+	// explicitly not locking here because no one else can
+	// modify this value before we return it.
 	if value != "" {
 		c.params.Set(equalToParam, escapeString(value))
 	} else {
@@ -143,6 +155,8 @@ func (fb *Firebase) EqualTo(value string) *Firebase {
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#section-rest-filtering
 func (fb *Firebase) EqualToValue(value interface{}) *Firebase {
 	c := fb.copy()
+	// explicitly not locking here because no one else can
+	// modify this value before we return it.
 	if value != "" {
 		c.params.Set(equalToParam, escapeParameter(value))
 	} else {
@@ -176,6 +190,8 @@ func escapeParameter(s interface{}) string {
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#limit-queries
 func (fb *Firebase) LimitToFirst(value int64) *Firebase {
 	c := fb.copy()
+	// explicitly not locking here because no one else can
+	// modify this value before we return it.
 	if value > 0 {
 		c.params.Set(limitToFirstParam, strconv.FormatInt(value, 10))
 	} else {
@@ -190,6 +206,8 @@ func (fb *Firebase) LimitToFirst(value int64) *Firebase {
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#limit-queries
 func (fb *Firebase) LimitToLast(value int64) *Firebase {
 	c := fb.copy()
+	// explicitly not locking here because no one else can
+	// modify this value before we return it.
 	if value > 0 {
 		c.params.Set(limitToLastParam, strconv.FormatInt(value, 10))
 	} else {
@@ -205,11 +223,13 @@ func (fb *Firebase) LimitToLast(value int64) *Firebase {
 //
 // Reference https://firebase.google.com/docs/database/rest/retrieve-data#shallow
 func (fb *Firebase) Shallow(v bool) {
+	fb.paramsMtx.Lock()
 	if v {
 		fb.params.Set(shallowParam, "true")
 	} else {
 		fb.params.Del(shallowParam)
 	}
+	fb.paramsMtx.Unlock()
 }
 
 // IncludePriority determines whether or not to ask Firebase
@@ -217,9 +237,11 @@ func (fb *Firebase) Shallow(v bool) {
 //
 // Reference https://www.firebase.com/docs/rest/api/#section-param-format
 func (fb *Firebase) IncludePriority(v bool) {
+	fb.paramsMtx.Lock()
 	if v {
 		fb.params.Set(formatParam, formatVal)
 	} else {
 		fb.params.Del(formatParam)
 	}
+	fb.paramsMtx.Unlock()
 }
