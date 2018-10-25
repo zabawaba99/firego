@@ -191,7 +191,12 @@ func (fb *Firebase) Value(v interface{}) error {
 // String returns the string representation of the
 // Firebase reference.
 func (fb *Firebase) String() string {
-	path := fb.url + "/.json"
+	var path string
+	if strings.HasSuffix(fb.url, ".com") {
+		path = fb.url + "/.json"
+	} else {
+		path = fb.url + ".json"
+	}
 
 	fb.paramsMtx.RLock()
 	if len(fb.params) > 0 {
