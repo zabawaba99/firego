@@ -27,10 +27,10 @@ install:
 script:
   # ensure everything is formatted all pretty like
   - if gofmt -l -s . | grep '**.go'; then exit 1; fi
-  # vet out possible issues
-  - go vet ./...
   # run tests
   - go get -t
+  # vet out possible issues
+  - go vet ./...
   - go test -a -race -v ./...
 
 after_success:
