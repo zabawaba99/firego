@@ -1,4 +1,7 @@
 # Firego
+
+## Deprecated in favor of [firebase/firebase-admin-go](https://github.com/firebase/firebase-admin-go).
+
 ---
 [![Build Status](https://travis-ci.org/zabawaba99/firego.svg?branch=v1)](https://travis-ci.org/zabawaba99/firego) [![Coverage Status](https://coveralls.io/repos/github/zabawaba99/firego/badge.svg?branch=v1)](https://coveralls.io/github/zabawaba99/firego?branch=v1)
 ---
